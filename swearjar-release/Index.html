@@ -1,0 +1,2968 @@
+<!-- Swear Jar Overlay © 2026 Jakes. All rights reserved. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swear Jar</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html {
+  width: 100%; height: 100%;
+}
+
+body {
+  background: transparent;
+  width: 100%; height: 100%;
+  min-width: 100vw; min-height: 100vh;
+  overflow: hidden;
+  font-family: 'Space Mono', monospace;
+}
+
+/* ══════════════════════════════════════════
+   SETUP SCREEN
+══════════════════════════════════════════ */
+#setup {
+  position: fixed; inset: 0;
+  background: #0a0800;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: clamp(24px, 4vw, 60px) clamp(20px, 5vw, 60px);
+  z-index: 9999;
+}
+.card {
+  background: #110e00;
+  border: 1px solid rgba(255,200,40,0.25);
+  border-radius: clamp(14px, 2vw, 24px);
+  padding: clamp(32px, 5vh, 70px) clamp(28px, 6vw, 72px);
+  width: min(860px, 92vw);
+  box-shadow: 0 0 80px rgba(255,180,0,0.06);
+}
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(52px, 10vw, 112px); letter-spacing: clamp(4px, 0.8vw, 10px);
+  color: #ffc820;
+  text-shadow: 0 0 30px rgba(255,200,32,0.5);
+  line-height: 1;
+}
+.logo-sub {
+  font-size: clamp(10px, 1.4vw, 15px); letter-spacing: 3px;
+  color: #6a5518; text-transform: uppercase;
+  margin-bottom: clamp(22px, 4vh, 42px); margin-top: 4px;
+}
+.field { margin-bottom: clamp(16px, 2.5vh, 28px); }
+label {
+  display: block; font-size: clamp(10px, 1.2vw, 14px);
+  letter-spacing: 2px; color: #9a7a28;
+  text-transform: uppercase; margin-bottom: clamp(7px, 1vh, 12px);
+}
+input, select, textarea {
+  width: 100%;
+  background: #080600; border: 1px solid #2a2000;
+  border-radius: 8px; color: #f0d060;
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(14px, 1.8vw, 20px);
+  padding: clamp(11px, 1.6vh, 18px) clamp(14px, 2vw, 22px);
+  outline: none; transition: border-color .2s;
+}
+input:focus, select:focus, textarea:focus { border-color: #ffc820; }
+textarea { resize: vertical; min-height: clamp(80px, 12vh, 140px); line-height: 1.7; }
+
+/* ── TAG INPUT ── */
+#cfg-words-tags {
+  width: 100%; box-sizing: border-box;
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  background: #080600; border: 1px solid rgba(245,166,35,0.4);
+  border-radius: 8px; padding: 8px clamp(10px, 1.5vw, 16px);
+  min-height: clamp(80px, 12vh, 140px);
+  cursor: text; transition: border-color .2s;
+  align-content: flex-start;
+}
+#cfg-words-tags:focus-within { border-color: #ffc820; }
+.tag-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(245,166,35,0.15); border: 1px solid rgba(245,166,35,0.5);
+  color: #f5a623; border-radius: 4px; padding: 2px 6px;
+  font-size: 13px; font-family: 'Space Mono', monospace; white-space: nowrap;
+}
+.tag-chip .tag-remove {
+  background: none; border: none; padding: 0; margin: 0;
+  color: rgba(245,166,35,0.6); cursor: pointer; font-size: 14px;
+  line-height: 1; display: inline-flex; align-items: center;
+}
+.tag-chip .tag-remove:hover { color: #f5a623; }
+#tag-input-field {
+  flex: 1 1 80px; min-width: 80px;
+  background: transparent; border: none; outline: none;
+  color: #e0e0e0; font-family: 'Space Mono', monospace;
+  font-size: clamp(13px, 1.6vw, 17px); padding: 2px 0;
+}
+#tag-input-field::placeholder { color: rgba(224,224,224,0.35); }
+
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(12px, 2vw, 24px); }
+
+/* ── POSITION BUTTONS ── */
+.pos-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: clamp(6px, 1vw, 12px);
+}
+.pos-btn {
+  background: rgba(255,200,40,0.06);
+  border: 1px solid rgba(255,200,40,0.2);
+  border-radius: 7px; color: #5a4a10;
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(13px, 1.4vw, 18px);
+  letter-spacing: 1px; text-transform: uppercase;
+  padding: clamp(8px, 1.2vh, 14px) 4px;
+  cursor: pointer; transition: all .18s;
+}
+.pos-btn:hover  { border-color: rgba(255,200,40,0.5); color: #c09020; }
+.pos-btn.active { background: rgba(255,200,40,0.18); border-color: rgba(255,210,60,0.75); color: #ffc820; }
+
+/* ── RESET PRESET BUTTONS ── */
+.preset-btns { display: flex; gap: clamp(6px,1vw,10px); flex-wrap: wrap; margin-top: clamp(6px,1vh,10px); }
+.preset-btn {
+  background: rgba(255,200,40,0.06);
+  border: 1px solid rgba(255,200,40,0.2);
+  border-radius: 6px; color: #5a4a10;
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(13px, 1.4vw, 17px); letter-spacing: 1px;
+  padding: clamp(5px,0.8vh,9px) clamp(10px,1.4vw,16px);
+  white-space: nowrap;
+  cursor: pointer; transition: all .18s;
+}
+.preset-btn:hover  { border-color: rgba(255,200,40,0.5); color: #c09020; }
+.preset-btn.active { background: rgba(255,200,40,0.18); border-color: rgba(255,210,60,0.75); color: #ffc820; }
+
+/* ── SIZE BUTTONS ── */
+.size-btn {
+  background: rgba(255,200,40,0.06);
+  border: 1px solid rgba(255,200,40,0.2);
+  border-radius: 6px; color: #5a4a10;
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(14px, 1.7vw, 20px); letter-spacing: 1px;
+  padding: clamp(6px,1vh,12px) clamp(14px,2vw,26px);
+  cursor: pointer; transition: all .18s;
+}
+.size-btn:hover  { border-color: rgba(255,200,40,0.5); color: #c09020; }
+.size-btn.active { background: rgba(255,200,40,0.18); border-color: rgba(255,210,60,0.75); color: #ffc820; }
+
+/* ── SECTION DIVIDERS ── */
+.section-label {
+  font-size: clamp(11px,1.3vw,13px); letter-spacing: 4px;
+  color: #7a6020; text-transform: uppercase;
+  border-bottom: 1px solid rgba(255,200,40,0.15);
+  padding-bottom: 8px; margin-bottom: clamp(12px,1.8vh,20px);
+  display: block;
+}
+.section-block {
+  border-left: 2px solid rgba(255,200,40,0.18);
+  padding-left: clamp(12px,1.8vw,20px);
+  margin-bottom: clamp(16px,2.5vh,28px);
+}
+.section-block .section-label {
+  color: #8a7028;
+  border-bottom-color: rgba(255,200,40,0.18);
+}
+
+.launch-btn {
+  width: 100%; margin-top: clamp(14px, 2.2vh, 24px);
+  padding: clamp(18px, 2.8vh, 30px); border: none; border-radius: 10px;
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+  color: #1a0e00; font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(26px, 4.5vw, 50px); letter-spacing: clamp(5px, 0.8vw, 10px);
+  cursor: pointer; transition: all .2s;
+  box-shadow: 0 4px 28px rgba(255,180,0,0.18);
+}
+.launch-btn:hover { box-shadow: 0 0 50px rgba(255,200,0,0.55); transform: translateY(-2px); }
+
+/* ── ADVANCED OPTIONS TOGGLE ── */
+.adv-toggle {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  background: transparent;
+  border: 1px solid rgba(255,200,40,0.18);
+  border-radius: 8px;
+  padding: clamp(10px,1.4vh,16px) clamp(14px,2vw,20px);
+  cursor: pointer;
+  margin-bottom: clamp(10px,1.5vh,18px);
+  transition: border-color .2s, background .2s;
+}
+.adv-toggle:hover { border-color: rgba(255,200,40,0.4); background: rgba(255,200,40,0.04); }
+.adv-toggle-label {
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(10px,1.2vw,13px); letter-spacing: 3px;
+  color: #7a6020; text-transform: uppercase;
+}
+.adv-toggle-chevron {
+  color: #5a4a10; font-size: clamp(10px,1.2vw,14px);
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+  display: inline-block; line-height: 1;
+}
+.adv-toggle.open .adv-toggle-chevron { transform: rotate(180deg); }
+.adv-toggle.open { border-color: rgba(255,200,40,0.3); }
+.adv-toggle.open .adv-toggle-label { color: #9a7a28; }
+
+.adv-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .38s cubic-bezier(.4,0,.2,1);
+}
+.adv-body.open { max-height: 1800px; }
+
+/* Secondary actions — smaller, outlined style */
+.secondary-btn {
+  width: 100%; margin-top: clamp(8px, 1.2vh, 14px);
+  padding: clamp(10px, 1.5vh, 16px); border-radius: 8px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(16px, 2.4vw, 28px); letter-spacing: clamp(3px, 0.5vw, 7px);
+  cursor: pointer; transition: all .2s;
+}
+.secondary-btn:hover { transform: translateY(-1px); }
+.btn-test {
+  background: transparent;
+  border: 1.5px solid rgba(60,180,60,0.45);
+  color: #6aaa50;
+}
+.btn-test:hover { border-color: rgba(80,220,80,0.7); color: #90dd70; background: rgba(60,180,60,0.06); }
+.btn-preview {
+  background: transparent;
+  border: 1.5px solid rgba(255,120,0,0.35);
+  color: #c06820;
+}
+.btn-preview:hover { border-color: rgba(255,140,0,0.6); color: #e08030; background: rgba(255,100,0,0.06); }
+
+/* ══════════════════════════════════════════
+   OVERLAY
+══════════════════════════════════════════ */
+#overlay {
+  display: none;
+  position: fixed; inset: 0;
+  pointer-events: none;
+}
+
+/* ── JAR WRAP ── */
+#jar-wrap {
+  position: absolute;
+  top: 16px; left: 16px;
+  width: calc(170px * 0.62);  /* updated by applyJarZoom(); default M=0.62 */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  pointer-events: all;
+}
+
+/* ── JAR SCALER OUTER — explicit visual dimensions drive the flex column.
+      Avoids relying on transform + negative-margin math, which OBS Chromium
+      can misreport (causing the strip to land inside the jar). ── */
+#jar-scaler-outer {
+  width:    calc(170px * 0.62);   /* visual width  — updated by applyJarZoom() */
+  height:   calc(230px * 0.62);   /* visual height — updated by applyJarZoom() */
+  position: relative;
+  overflow: visible;              /* word-badge overflows above; shards below */
+  flex-shrink: 0;
+}
+
+/* ── JAR SCALER — absolutely positioned inside outer so it never
+      affects flex layout. transform:scale() animates correctly in OBS. ── */
+#jar-scaler {
+  width: 170px;
+  position: absolute;
+  top: 0; left: 0;
+  transform: scale(0.62);    /* updated by applyJarZoom(); default M */
+  transform-origin: top left;
+}
+
+/* ── JAR CONTAINER ── */
+#jar-container {
+  width: 170px; height: 230px;
+  position: relative;
+  pointer-events: none;
+  flex-shrink: 0;
+  transform: rotate(0deg);
+}
+
+#jar-svg {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  z-index: 2; pointer-events: none;
+  animation: jar-breathe 3s ease-in-out infinite;
+}
+@keyframes jar-breathe {
+  0%,100% { filter: drop-shadow(0 0 3px rgba(255,200,40,0.18)); }
+  50%      { filter: drop-shadow(0 0 14px rgba(255,200,40,0.60)); }
+}
+@keyframes menu-jar-breathe {
+  0%,100% { filter: drop-shadow(0 0 8px rgba(255,200,40,0.30)); }
+  50%      { filter: drop-shadow(0 0 22px rgba(255,200,40,0.70)); }
+}
+
+/* ── GLASS CRACK OVERLAY ── */
+#jar-crack-overlay {
+  position: absolute; inset: 0;
+  z-index: 5; pointer-events: none;
+  opacity: 0;
+}
+#jar-crack-overlay.cracked { opacity: 1; }
+.crack-line {
+  stroke-dasharray: 300;
+  stroke-dashoffset: 300;
+}
+.crack-line.draw {
+  animation: draw-crack 0.12s ease-out forwards;
+}
+@keyframes draw-crack {
+  to { stroke-dashoffset: 0; }
+}
+
+/* ── MONEY INSIDE JAR ── */
+#jar-fill {
+  position: absolute;
+  bottom: 12px; left: 21px; right: 21px;  /* aligned to jar body sides (SVG x=21/x=149) */
+  height: 164px;
+  overflow: hidden;
+  border-radius: 0 0 64px 64px / 0 0 26px 26px;  /* elliptical — matches jar bottom curve */
+  z-index: 1;
+  pointer-events: none;
+}
+.jar-emoji {
+  position: absolute;
+  line-height: 1;
+  display: inline-block;
+  animation: emoji-drop 0.38s cubic-bezier(.15,1.5,.35,1) both;
+}
+@keyframes emoji-drop {
+  from { transform: translateY(-22px) rotate(var(--rot)) scale(0.2); opacity: 0; }
+  to   { transform: translateY(0)     rotate(var(--rot)) scale(1);   opacity: 1; }
+}
+
+/* ── OVERFLOW EMOJIS ── */
+#jar-overflow {
+  position: absolute;
+  bottom: 174px; left: 28px; right: 28px;
+  height: 80px;
+  pointer-events: none;
+  z-index: 3;
+  overflow: visible;
+}
+.overflow-emoji {
+  position: absolute;
+  pointer-events: none;
+  animation: overflow-float var(--of-dur) ease-out var(--of-delay) both;
+}
+@keyframes overflow-float {
+  0%   { transform: translate(var(--of-x0), 20px) rotate(var(--of-r0)) scale(0.5); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translate(var(--of-x1), var(--of-y1)) rotate(var(--of-r1)) scale(1.1); opacity: 0.85; }
+}
+
+/* ── JAR COUNT ── */
+#jar-text {
+  position: absolute;
+  bottom: 30px; left: 0; right: 0;
+  text-align: center; z-index: 10;
+  pointer-events: none;
+}
+#jar-count-display {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px; line-height: 1; color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.98), 0 0 16px rgba(0,0,0,0.9);
+  letter-spacing: 2px;
+}
+
+/* ── WORD BADGE ── */
+#word-badge {
+  position: absolute;
+  top: -44px; left: 50%; transform: translateX(-50%);
+  background: rgba(220,30,30,0.95);
+  color: #fff; font-size: 11px; letter-spacing: 2px;
+  padding: 5px 14px; border-radius: 20px;
+  white-space: nowrap; opacity: 0;
+  transition: opacity .12s; pointer-events: none;
+  box-shadow: 0 0 20px rgba(220,30,30,0.5);
+}
+#word-badge.show { opacity: 1; }
+#word-badge.combo {
+  background: rgba(255,110,0,0.95);
+  box-shadow: 0 0 28px rgba(255,110,0,0.8);
+  font-size: 12px; letter-spacing: 1.5px;
+}
+
+/* ── MIC DOT ── */
+#mic-status {
+  position: absolute; top: 8px; right: -26px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: transparent; opacity: 0;
+  transition: opacity 0.3s;
+}
+#mic-status.on  { background:transparent; opacity:0; }
+#mic-status.err { background:#ff2244; box-shadow:0 0 8px #ff2244; opacity:1; }
+@keyframes mic-blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+/* ── JAR LABEL STRIP ── */
+#jar-label-strip {
+  margin-top: 6px;
+  background: rgba(0,0,0,0.62);
+  border: 1px solid rgba(255,200,40,0.2);
+  border-radius: 6px;
+  padding: 5px 6px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+#strip-label {
+  font-size: 9px; letter-spacing: 2px;
+  color: #7a6020; text-transform: uppercase;
+  text-align: center; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+#strip-btns-row {
+  display: flex;
+  gap: 5px;
+}
+.strip-btn {
+  background: transparent;
+  border: 1px solid rgba(255,200,40,0.25);
+  color: #7a6020; font-size: 9px; letter-spacing: 1px;
+  border-radius: 4px; padding: 4px 2px;
+  cursor: pointer; font-family: 'Space Mono', monospace;
+  text-transform: uppercase;
+  transition: all .2s; white-space: nowrap;
+  flex: 1; text-align: center;
+}
+.strip-btn:hover { color: #ffc820; border-color: rgba(255,200,40,0.55); }
+
+/* ── JAR COLOR SWATCHES ── */
+.swatch-btn {
+  width: clamp(22px, 2.2vw, 36px); height: clamp(22px, 2.2vw, 36px); border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.15);
+  cursor: pointer; transition: transform .15s, border-color .15s;
+  flex-shrink: 0;
+}
+.swatch-btn:hover { transform: scale(1.2); border-color: rgba(255,255,255,0.7); }
+
+/* ── WARNING STATES ── */
+@keyframes jar-warn {
+  0%,100% { filter: drop-shadow(0 0 6px rgba(255,140,0,0.4)); }
+  50%      { filter: drop-shadow(0 0 22px rgba(255,140,0,0.95)); }
+}
+@keyframes jar-danger {
+  0%,100% { filter: drop-shadow(0 0 8px rgba(255,30,30,0.5)); }
+  50%      { filter: drop-shadow(0 0 28px rgba(255,30,30,1)); }
+}
+#jar-container.warn   { animation: jar-warn   1.2s ease-in-out infinite; }
+#jar-container.danger { animation: jar-danger 0.5s ease-in-out infinite; }
+
+/* ── SHAKE ON SWEAR ── */
+@keyframes jar-shake {
+  0%,100% { transform: rotate(0deg); }
+  20% { transform: rotate(-4deg) translateX(-3px); }
+  40% { transform: rotate(4deg)  translateX(3px); }
+  60% { transform: rotate(-2deg); }
+  80% { transform: rotate(2deg); }
+}
+#jar-container.shaking { animation: jar-shake 0.4s ease-in-out; }
+
+/* ── COMBO SHAKE — bigger, faster ── */
+@keyframes jar-shake-combo {
+  0%,100% { transform: rotate(0deg) scale(1); }
+  15% { transform: rotate(-7deg) translateX(-5px) scale(1.05); }
+  35% { transform: rotate(7deg)  translateX(5px)  scale(1.05); }
+  55% { transform: rotate(-4deg) translateX(-3px) scale(1.02); }
+  75% { transform: rotate(4deg)  translateX(3px)  scale(1.02); }
+}
+#jar-container.shaking-combo { animation: jar-shake-combo 0.36s ease-in-out; }
+
+/* ── TEETER AT 90% ── */
+@keyframes jar-teeter {
+  0%   { transform: rotate(0deg); }
+  20%  { transform: rotate(-5deg) translateX(-2px); }
+  40%  { transform: rotate(5deg)  translateX(2px); }
+  60%  { transform: rotate(-4deg) translateX(-1px); }
+  80%  { transform: rotate(4deg)  translateX(1px); }
+  100% { transform: rotate(0deg); }
+}
+#jar-container.teetering {
+  animation: jar-teeter 0.85s ease-in-out infinite !important;
+}
+
+/* ── MILESTONE FLASH ── */
+#milestone-flash {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 450;
+  background: transparent;
+}
+@keyframes mf1 { 0% { background: rgba(255,255,255,0.28); } 100% { background: transparent; } }
+@keyframes mf2 { 0% { background: rgba(255,180,0,0.50); }  100% { background: transparent; } }
+@keyframes mf3 { 0% { background: rgba(255,220,0,0.70); }  100% { background: transparent; } }
+#milestone-flash.tier-1 { animation: mf1 0.45s ease-out forwards; }
+#milestone-flash.tier-2 { animation: mf2 0.55s ease-out forwards; }
+#milestone-flash.tier-3 { animation: mf3 0.70s ease-out forwards; }
+
+/* ── MILESTONE WORD SLAM ── */
+#milestone-word {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none; z-index: 460;
+}
+#milestone-word-text {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(80px, 18vw, 260px);
+  letter-spacing: 6px;
+  line-height: 1;
+  opacity: 0;
+  transform: scale(0.3);
+  will-change: transform, opacity;
+  max-width: 92vw;
+  text-align: center;
+  word-break: keep-all;
+  color: transparent;
+  -webkit-text-stroke: 3px currentColor;
+}
+#milestone-word-text.slam-tier-1 {
+  -webkit-text-stroke-color: rgba(255,230,120,0.95);
+  filter: drop-shadow(0 0 18px rgba(255,220,80,0.7));
+}
+#milestone-word-text.slam-tier-2 {
+  -webkit-text-stroke-color: rgba(255,200,0,1.0);
+  filter: drop-shadow(0 0 24px rgba(255,180,0,0.85));
+}
+#milestone-word-text.slam-tier-3 {
+  -webkit-text-stroke-color: rgba(255,120,20,1.0);
+  filter: drop-shadow(0 0 32px rgba(255,80,0,0.90));
+}
+@keyframes word-slam {
+  0%   { opacity: 0; transform: scale(0.25); }
+  18%  { opacity: 1; transform: scale(1.12); }
+  32%  { opacity: 1; transform: scale(0.97); }
+  55%  { opacity: 1; transform: scale(1.00); }
+  80%  { opacity: 0.85; transform: scale(1.00); }
+  100% { opacity: 0;    transform: scale(1.50); }
+}
+#milestone-word-text.slamming {
+  animation: word-slam 1.1s cubic-bezier(0.15,1.4,0.5,1) forwards;
+}
+
+/* ── MILESTONE SHAKES ── */
+@keyframes mshake1 {
+  0%,100%{transform:translate(0,0);}
+  25%{transform:translate(-5px,-4px);}
+  50%{transform:translate(5px,4px);}
+  75%{transform:translate(-3px,2px);}
+}
+@keyframes mshake2 {
+  0%,100%{transform:translate(0,0);}
+  15%{transform:translate(-10px,-8px);}
+  35%{transform:translate(10px,8px);}
+  55%{transform:translate(-7px,5px);}
+  75%{transform:translate(7px,-5px);}
+  90%{transform:translate(-3px,2px);}
+}
+@keyframes mshake3 {
+  0%,100%{transform:translate(0,0);}
+  10%{transform:translate(-18px,-13px);}
+  22%{transform:translate(18px,13px);}
+  38%{transform:translate(-13px,9px);}
+  52%{transform:translate(13px,-9px);}
+  66%{transform:translate(-8px,5px);}
+  80%{transform:translate(8px,-5px);}
+  92%{transform:translate(-3px,2px);}
+}
+body.mshake1 { animation: mshake1 0.35s ease-out forwards; }
+body.mshake2 { animation: mshake2 0.48s ease-out forwards; }
+body.mshake3 { animation: mshake3 0.65s ease-out forwards; }
+
+/* ── SCREEN SHAKE ── */
+@keyframes screen-shake {
+  0%,100% { transform: translate(0,0); }
+  10% { transform: translate(-14px,-10px); }
+  20% { transform: translate(14px,10px); }
+  30% { transform: translate(-10px,7px); }
+  40% { transform: translate(10px,-7px); }
+  55% { transform: translate(-5px,3px); }
+  70% { transform: translate(5px,-3px); }
+  85% { transform: translate(-2px,1px); }
+}
+body.shaking { animation: screen-shake 0.7s ease-out forwards; }
+
+/* ══════════════════════════════════════════
+   SPILL LAYER
+══════════════════════════════════════════ */
+#spill-layer {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 500;
+  display: none;
+}
+
+/* Glass shards */
+.glass-shard {
+  position: absolute;
+  pointer-events: none;
+  font-size: var(--gs);
+  animation: shard-fly var(--gd) cubic-bezier(.15,.8,.3,1) var(--gdelay) both;
+}
+@keyframes shard-fly {
+  0%   { transform: translate(0,0) rotate(0deg) scale(1); opacity:0.9; }
+  100% { transform: translate(var(--gx),var(--gy)) rotate(var(--gr)) scale(0.15); opacity:0; }
+}
+
+/* Flash on crash */
+#crash-flash {
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0);
+  pointer-events: none; z-index: 600;
+}
+#crash-flash.pop { animation: flash-pop 0.45s ease-out forwards; }
+@keyframes flash-pop {
+  0%   { background: rgba(255,255,200,0.88); }
+  100% { background: rgba(255,255,255,0); }
+}
+
+/* ── CONFETTI BURST — flies to position and STAYS ── */
+.burst-particle {
+  position: absolute;
+  pointer-events: none;
+  filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));
+  animation: burst-fly var(--bd) cubic-bezier(.05,.85,.2,1) var(--bdelay) both;
+}
+@keyframes burst-fly {
+  0%   { transform: translate(0,0) rotate(0deg); font-size: calc(var(--bfs)*0.2); opacity:0; }
+  6%   { opacity: 1; }
+  100% { transform: translate(var(--btx),var(--bty)) rotate(var(--brot)); font-size: var(--bfs); opacity:1; }
+}
+
+/* ── MONEY RAIN — slow heavy curtain ── */
+.rain-particle {
+  position: absolute;
+  top: -100px;
+  pointer-events: none;
+  filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));
+  animation: rain-fall var(--rd) linear var(--rdelay) forwards;
+}
+@keyframes rain-fall {
+  0%   { transform: translateY(0) rotate(var(--r0)); font-size: var(--rfs); opacity: 1; }
+  40%  { font-size: calc(var(--rfs) * 1.8); }
+  75%  { font-size: calc(var(--rfs) * 2.6); opacity: 1; }
+  100% { transform: translateY(var(--rfh)) rotate(var(--r1)); font-size: calc(var(--rfs) * 3.2); opacity: 0.95; }
+}
+
+.coin-particle {
+  position: absolute;
+  top: -70px;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.45));
+  animation: coin-fall var(--cd) linear var(--cdelay) forwards;
+}
+@keyframes coin-fall {
+  0%   { transform: translateY(0) rotate(var(--c0)); font-size: var(--cfs); opacity: 1; }
+  45%  { font-size: calc(var(--cfs) * 1.9); }
+  80%  { font-size: calc(var(--cfs) * 2.8); opacity: 1; }
+  100% { transform: translateY(var(--cfh)) rotate(var(--c1)); font-size: calc(var(--cfs) * 3.5); opacity: 0.9; }
+}
+
+/* Scrim */
+#money-scrim {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0);
+  transition: background 2s ease 0.5s;
+  pointer-events: none;
+}
+#money-scrim.darkened { background: rgba(5,4,0,0.55); }
+
+/* ── GAME OVER ── */
+#game-over {
+  position: absolute;
+  top: 38%; left: 50%;
+  transform: translate(-50%,-50%) scale(0.5);
+  text-align: center;
+  animation: go-appear 0.8s cubic-bezier(.2,1.4,.4,1) 5.0s forwards;
+  opacity: 0; z-index: 700;
+}
+@keyframes go-appear {
+  to { opacity:1; transform: translate(-50%,-50%) scale(1); }
+}
+#go-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(72px, 12vw, 140px);
+  color: #ffd700;
+  text-shadow: 0 0 80px rgba(255,200,0,1), 0 0 40px rgba(255,160,0,0.8), 0 8px 0 rgba(0,0,0,0.8);
+  letter-spacing: 10px; line-height: 1;
+}
+#go-sub {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(26px, 5vw, 64px);
+  color: #ffffff;
+  -webkit-text-stroke: 2px #000;
+  letter-spacing: 6px; margin-top: 14px;
+  text-shadow: 0 3px 0 rgba(0,0,0,0.9), 0 0 30px rgba(0,0,0,0.6);
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+/* ── COUNTDOWN ── */
+#countdown-wrap {
+  margin-top: 30px;
+  display: flex; align-items: center; justify-content: center;
+}
+.countdown-face {
+  display: flex; align-items: center; justify-content: center;
+  animation: face-pop 0.5s cubic-bezier(.2,1.6,.4,1) both;
+}
+@keyframes face-pop {
+  from { transform: scale(0.1) rotate(-20deg); opacity:0; }
+  to   { transform: scale(1)   rotate(0deg);  opacity:1; }
+}
+.bill-face {
+  width: 210px; height: 95px;
+  background: linear-gradient(135deg, #1a420d 0%, #2a7016 30%, #359020 50%, #2a7016 70%, #1a420d 100%);
+  border: 4px solid #52b428;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  box-shadow: 0 0 60px rgba(60,200,40,0.8), 0 0 25px rgba(60,200,40,0.4), inset 0 0 30px rgba(0,0,0,0.45);
+}
+.bill-face::before {
+  content: '';
+  position: absolute; inset: 6px;
+  border: 1.5px solid rgba(255,255,255,0.18);
+  border-radius: 5px;
+}
+.bill-face::after {
+  content: '★  FEDERAL RESERVE  ★';
+  position: absolute; bottom: 7px; left: 0; right: 0;
+  text-align: center;
+  font-size: 8px; letter-spacing: 3px; color: rgba(255,255,255,0.12);
+}
+.bill-corner {
+  position: absolute;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 15px; color: rgba(160,255,100,0.45);
+  letter-spacing: 1px;
+}
+.bill-corner.tl { top: 7px; left: 10px; }
+.bill-corner.tr { top: 7px; right: 10px; }
+.bill-number {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 68px; letter-spacing: 4px;
+  color: #d0ffa0;
+  text-shadow: 0 0 35px rgba(120,255,60,0.95), 0 0 12px rgba(80,200,30,0.7), 0 3px 0 rgba(0,50,0,0.9);
+}
+.coin-face {
+  width: 115px; height: 115px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 32%, #fff5a0 0%, #ffe066 15%, #ffc200 45%, #d4920a 70%, #8a5c00 100%);
+  border: 5px solid #ffd700;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 55px rgba(255,200,0,0.95), 0 0 22px rgba(255,160,0,0.6), inset 0 0 20px rgba(0,0,0,0.25), inset 4px 4px 12px rgba(255,255,255,0.4);
+  position: relative;
+}
+.coin-face::before {
+  content: '';
+  position: absolute; inset: 6px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,240,100,0.3);
+}
+.coin-number {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 56px; letter-spacing: 2px;
+  color: #5a2e00;
+  text-shadow: 1px 1px 0 rgba(255,220,80,0.6), 0 2px 8px rgba(200,100,0,0.4);
+}
+
+.drip-svg { position:absolute; width:0; height:0; pointer-events:none; }
+
+/* ── SWEAR FLASH OVERLAY ── */
+@keyframes swear-flash-strobe {
+  0%   { opacity: 0.85; }
+  14%  { opacity: 0.06; }
+  28%  { opacity: 0.80; }
+  42%  { opacity: 0.06; }
+  56%  { opacity: 0.75; }
+  70%  { opacity: 0.06; }
+  84%  { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+</style>
+</head>
+<body>
+
+<svg class="drip-svg" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="drip-filter" x="-20%" y="-20%" width="140%" height="180%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.01 0.15" numOctaves="2" seed="9" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
+
+<!-- ═══════ SETUP ═══════ -->
+<div id="setup">
+  <div class="card">
+    <!-- ── CARD HEADER: logo left, jar mascot right ── -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:clamp(22px,4vh,42px);">
+      <div>
+        <div class="logo">SWEAR JAR</div>
+        <div class="logo-sub" style="margin-bottom:0;">Say the word. Pay the price.</div>
+      </div>
+      <!-- Live jar preview — responds to color picker -->
+      <div id="menu-jar-wrap" style="flex-shrink:0;margin-left:clamp(16px,2vw,28px);margin-top:4px;">
+        <svg id="menu-jar-svg" viewBox="0 0 170 230" fill="none" xmlns="http://www.w3.org/2000/svg"
+             style="width:clamp(72px,9vw,120px);height:auto;filter:drop-shadow(0 0 18px rgba(255,200,40,0.35));animation:menu-jar-breathe 3s ease-in-out infinite;">
+          <!-- Lid -->
+          <rect id="mj-lid" x="20" y="4" width="130" height="26" rx="4"
+            fill="rgba(200,160,40,0.22)" stroke="rgba(255,210,60,0.7)" stroke-width="3.5"/>
+          <line x1="20" y1="13" x2="150" y2="13" stroke="rgba(255,210,60,0.28)" stroke-width="1"/>
+          <line x1="20" y1="21" x2="150" y2="21" stroke="rgba(255,210,60,0.28)" stroke-width="1"/>
+          <!-- Body -->
+          <path id="mj-body"
+            d="M26,30 L21,42 L21,192 Q21,218 85,218 Q149,218 149,192 L149,42 L144,30 Z"
+            fill="rgba(255,200,40,0.07)" stroke="rgba(255,210,60,0.58)" stroke-width="3.5"/>
+          <!-- Glass highlights -->
+          <path d="M28,48 Q23,100 24,160" stroke="rgba(255,255,255,0.22)" stroke-width="4.5" stroke-linecap="round"/>
+          <path d="M142,52 Q147,96 146,130" stroke="rgba(255,255,255,0.08)" stroke-width="2.5" stroke-linecap="round"/>
+          <!-- Bottom oval -->
+          <ellipse id="mj-bottom" cx="85" cy="207" rx="60" ry="11"
+            fill="rgba(200,160,20,0.14)" stroke="rgba(255,200,50,0.40)" stroke-width="2.5"/>
+          <!-- $#@% label -->
+          <text x="85" y="108" text-anchor="middle"
+            font-family="Arial Black,Impact,Haettenschweiler,sans-serif"
+            font-size="37" font-weight="900"
+            fill="none" stroke="rgba(255,210,60,0.55)" stroke-width="4" paint-order="stroke">$#@%</text>
+          <text x="85" y="108" text-anchor="middle"
+            font-family="Arial Black,Impact,Haettenschweiler,sans-serif"
+            font-size="37" font-weight="900"
+            fill="rgba(255,210,60,0.50)">$#@%</text>
+          <!-- A few coins inside to make it feel alive -->
+          <text x="42" y="190" font-size="18" opacity="0.7">💵</text>
+          <text x="68" y="195" font-size="16" opacity="0.75">🪙</text>
+          <text x="95" y="188" font-size="17" opacity="0.65">💵</text>
+          <text x="118" y="193" font-size="15" opacity="0.7">🪙</text>
+          <text x="55" y="175" font-size="14" opacity="0.55">💸</text>
+          <text x="88" y="172" font-size="13" opacity="0.5">💵</text>
+          <text x="108" y="178" font-size="14" opacity="0.6">🪙</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- ── STREAM RULES ───────────────────────────────────── -->
+    <div class="section-block">
+      <span class="section-label">Stream Rules</span>
+      <div class="field row2">
+        <div>
+          <label>Swear Limit</label>
+          <input type="number" id="cfg-limit" value="10" min="3" max="50"/>
+        </div>
+        <div>
+          <label>$ Per Swear</label>
+          <input type="number" id="cfg-cost" value="1" min="0.25" step="0.25"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Consequence Message</label>
+        <input type="text" id="cfg-consequence" value="STREAM OVER" maxlength="40"/>
+      </div>
+      <div class="field">
+        <label>Swear Word List</label>
+        <div id="cfg-words-tags"></div>
+        <input type="hidden" id="cfg-words" value="damn, hell, crap, shit, fuck, ass, bitch, bastard, dammit, bloody">
+      </div>
+      <div class="field">
+        <label>Mic Transcription Language <span style="color:#5a4a10;letter-spacing:1px;font-size:0.85em;">(match your swear words below)</span></label>
+        <select id="cfg-language">
+          <option value="en-US">English (US)</option>
+          <option value="en-GB">English (UK)</option>
+          <option value="en-AU">English (AU)</option>
+          <option value="es-ES">Spanish (Spain)</option>
+          <option value="es-MX">Spanish (Mexico)</option>
+          <option value="fr-FR">French</option>
+          <option value="de-DE">German</option>
+          <option value="pt-BR">Portuguese (Brazil)</option>
+          <option value="it-IT">Italian</option>
+          <option value="nl-NL">Dutch</option>
+          <option value="sv-SE">Swedish</option>
+          <option value="pl-PL">Polish</option>
+          <option value="ru-RU">Russian</option>
+          <option value="ja-JP">Japanese</option>
+          <option value="ko-KR">Korean</option>
+          <option value="zh-CN">Chinese (Simplified)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ── JAR APPEARANCE ─────────────────────────────────── -->
+    <div class="section-block">
+      <span class="section-label">Jar Appearance</span>
+      <div class="field">
+        <label>Color</label>
+        <div style="display:flex;align-items:center;gap:clamp(8px,1.5vw,16px);flex-wrap:wrap;">
+          <input type="color" id="cfg-jar-color" value="#ffd700"
+            style="width:clamp(40px,5vw,58px);height:clamp(36px,4.5vw,52px);padding:2px;border-radius:6px;cursor:pointer;flex-shrink:0;"/>
+          <div style="display:flex;gap:clamp(6px,1vw,12px);flex-wrap:wrap;align-items:center;">
+            <button type="button" class="swatch-btn" data-color="#ffd700" style="background:#ffd700"></button>
+            <button type="button" class="swatch-btn" data-color="#00cc88" style="background:#00cc88"></button>
+            <button type="button" class="swatch-btn" data-color="#4488ff" style="background:#4488ff"></button>
+            <button type="button" class="swatch-btn" data-color="#dd44ff" style="background:#dd44ff"></button>
+            <button type="button" class="swatch-btn" data-color="#ff4455" style="background:#ff4455"></button>
+            <button type="button" class="swatch-btn" data-color="#ff8800" style="background:#ff8800"></button>
+            <button type="button" class="swatch-btn" data-color="#aaffaa" style="background:#aaffaa"></button>
+            <button type="button" class="swatch-btn" data-color="#ffffff" style="background:#ffffff"></button>
+          </div>
+        </div>
+      </div>
+      <div class="field row2">
+        <div>
+          <label>Size</label>
+          <div class="preset-btns">
+            <button type="button" class="size-btn" data-size="S" onclick="setJarSize('S',this)">
+              S <span style="font-size:0.7em;opacity:0.65;letter-spacing:0;">45%</span>
+            </button>
+            <button type="button" class="size-btn active" data-size="M" onclick="setJarSize('M',this)">
+              M <span style="font-size:0.7em;opacity:0.65;letter-spacing:0;">62%</span>
+            </button>
+            <button type="button" class="size-btn" data-size="L" onclick="setJarSize('L',this)">
+              L <span style="font-size:0.7em;opacity:0.65;letter-spacing:0;">82%</span>
+            </button>
+          </div>
+        </div>
+        <div>
+          <label>Position</label>
+          <div class="pos-grid">
+            <button type="button" class="pos-btn active" id="pos-tl" data-pos="tl" onclick="setPos('tl')">↖ Top Left</button>
+            <button type="button" class="pos-btn"        id="pos-tr" data-pos="tr" onclick="setPos('tr')">↗ Top Right</button>
+            <button type="button" class="pos-btn"        id="pos-bl" data-pos="bl" onclick="setPos('bl')">↙ Bot Left</button>
+            <button type="button" class="pos-btn"        id="pos-br" data-pos="br" onclick="setPos('br')">↘ Bot Right</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── AUDIO & RESET ──────────────────────────────────── -->
+    <div class="section-block">
+      <span class="section-label">Audio &amp; Reset</span>
+      <div class="field row2">
+        <div>
+          <label>Fail Music</label>
+          <label style="display:flex;align-items:center;gap:clamp(10px,2vw,18px);cursor:pointer;margin-top:2px;">
+            <input type="checkbox" id="cfg-fail-music" checked
+              style="width:clamp(20px,2.5vw,30px);height:clamp(20px,2.5vw,30px);accent-color:#ffd700;cursor:pointer;flex-shrink:0;"/>
+            <span id="fail-music-label" style="font-size:clamp(12px,1.5vw,18px);color:#9a7a28;letter-spacing:2px;text-transform:uppercase;">ON</span>
+          </label>
+        </div>
+        <div>
+          <label>Auto-Reset After Spill</label>
+          <div style="display:flex;align-items:center;gap:clamp(8px,1.2vw,14px);">
+            <input type="number" id="cfg-reset-time" value="30" min="5" max="120"
+              style="width:clamp(80px,10vw,110px);"/>
+            <span style="font-size:clamp(11px,1.2vw,15px);color:#9a7a28;letter-spacing:1px;">sec</span>
+          </div>
+          <div class="preset-btns">
+            <button type="button" class="preset-btn" onclick="setResetPreset(12, this)">12s</button>
+            <button type="button" class="preset-btn" onclick="setResetPreset(20, this)">20s</button>
+            <button type="button" class="preset-btn active" onclick="setResetPreset(30, this)">30s</button>
+            <button type="button" class="preset-btn" onclick="setResetPreset(60, this)">60s</button>
+            <button type="button" class="preset-btn" onclick="setResetPreset(120, this)">120s</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ADVANCED OPTIONS (collapsible) ───────────────── -->
+    <button type="button" class="adv-toggle" id="adv-toggle" onclick="toggleAdvanced()">
+      <span class="adv-toggle-label">Advanced Options</span>
+      <span class="adv-toggle-chevron">▾</span>
+    </button>
+    <div class="adv-body" id="adv-body">
+
+      <!-- OBS Kill Stream -->
+      <div class="section-block">
+        <span class="section-label">
+          OBS Kill Stream
+          <button type="button" id="ks-info-btn" onclick="toggleKsInfo()"
+            style="width:clamp(16px,1.8vw,22px);height:clamp(16px,1.8vw,22px);border-radius:50%;
+                   border:1.5px solid rgba(255,200,40,0.4);background:rgba(255,200,40,0.08);
+                   color:#ffc820;font-family:'Space Mono',monospace;font-size:clamp(9px,1vw,12px);
+                   font-weight:700;cursor:pointer;line-height:1;vertical-align:middle;margin-left:8px;
+                   transition:background .2s,border-color .2s;">?</button>
+        </span>
+        <div class="field row2">
+          <div>
+            <label>Stop Stream on Fail</label>
+            <label style="display:flex;align-items:center;gap:clamp(10px,2vw,18px);cursor:pointer;margin-top:2px;">
+              <input type="checkbox" id="cfg-kill-stream"
+                style="width:clamp(20px,2.5vw,30px);height:clamp(20px,2.5vw,30px);accent-color:#ff4455;cursor:pointer;flex-shrink:0;"/>
+              <span id="kill-stream-label" style="font-size:clamp(12px,1.5vw,18px);color:#9a7a28;letter-spacing:2px;text-transform:uppercase;">OFF</span>
+            </label>
+          </div>
+          <div>
+            <label>OBS WebSocket URL</label>
+            <input type="text" id="cfg-obs-url" value="ws://localhost:4455" placeholder="ws://localhost:4455"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>OBS Password <span style="color:#5a4a10;letter-spacing:1px;font-size:0.85em;">(leave blank if none)</span></label>
+          <input type="password" id="cfg-obs-pass" placeholder="optional"/>
+        </div>
+      </div>
+
+      <!-- Twitch Integration -->
+      <div class="section-block">
+        <span class="section-label">Twitch Integration</span>
+        <div class="field row2">
+          <div>
+            <label>Channel Name</label>
+            <input type="text" id="cfg-twitch-channel" placeholder="channelname (no #)"/>
+          </div>
+          <div>
+            <label>Min Bits per Swear <span style="color:#5a4a10;font-size:0.85em;letter-spacing:0;">(0 = off)</span></label>
+            <input type="number" id="cfg-bits-threshold" value="0" min="0" placeholder="e.g. 100"/>
+          </div>
+        </div>
+        <div class="field">
+          <label>Donation Trigger Keyword</label>
+          <input type="text" id="cfg-donation-keyword" placeholder="e.g. donate, hydrate, !fill"/>
+          <p style="font-size:clamp(10px,1.1vw,12px);color:#6a5018;letter-spacing:1px;margin-top:7px;line-height:1.7;">
+            Mentioning this keyword in chat fills the jar instantly.
+          </p>
+        </div>
+        <p style="font-size:clamp(10px,1.1vw,12px);color:#6a5018;letter-spacing:1px;line-height:1.8;">
+          Mod commands: <span style="color:#8a6a28;">!swear [n]</span> &nbsp;·&nbsp;
+          <span style="color:#8a6a28;">!reset</span> &nbsp;·&nbsp;
+          <span style="color:#8a6a28;">!fill</span>
+        </p>
+      </div>
+
+      <!-- TikTok LIVE / Live Events Bridge -->
+      <div class="section-block" style="margin-top:clamp(16px,2.5vh,28px);">
+        <span class="section-label">TikTok LIVE / Event Bridge</span>
+        <div class="field row2">
+          <div>
+            <label>Bridge URL</label>
+            <input type="text" id="cfg-tiktok-url" value="ws://localhost:21213" placeholder="ws://localhost:21213"/>
+          </div>
+          <div>
+            <label>Gift Coins per Swear <span style="color:#5a4a10;font-size:0.85em;letter-spacing:0;">(0 = off)</span></label>
+            <input type="number" id="cfg-tiktok-threshold" value="0" min="0" placeholder="e.g. 100"/>
+          </div>
+        </div>
+        <p style="font-size:clamp(10px,1.1vw,12px);color:#6a5018;letter-spacing:1px;line-height:1.85;">
+          <strong style="color:#9a7a28;">How it works:</strong> Set the coin threshold, then run a free connector app on your PC to link TikTok LIVE. When viewers send gifts, the jar fills based on how many coins they spent.<br>
+          <strong style="color:#9a7a28;">Gift coin values:</strong> Rose = 1 &nbsp;·&nbsp; Drama Queen = 5,000 &nbsp;·&nbsp; Lion = 29,999 &nbsp;·&nbsp; Universe = 34,999<br>
+          <strong style="color:#9a7a28;">Example:</strong> Threshold = 100 coins → a Drama Queen gift (5,000 coins) fills 50 swears.<br>
+          Works with TikTok LIVE, YouTube Superchats, and Streamlabs alerts — setup guide included in the download.
+        </p>
+      </div>
+
+    </div><!-- /.adv-body -->
+
+    <!-- Kill Stream info popup -->
+    <div id="ks-info-popup" style="display:none;position:fixed;inset:0;z-index:99999;
+         align-items:center;justify-content:center;">
+      <div onclick="toggleKsInfo()" style="position:absolute;inset:0;background:rgba(0,0,0,0.75);"></div>
+      <div style="position:relative;z-index:1;background:#110e00;border:1px solid rgba(255,200,40,0.35);
+                  border-radius:clamp(10px,1.5vw,18px);padding:clamp(24px,3vw,40px) clamp(22px,3.5vw,44px);
+                  width:min(560px,88vw);box-shadow:0 0 60px rgba(255,160,0,0.15);">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,3vw,34px);
+                    letter-spacing:3px;color:#ffc820;margin-bottom:clamp(12px,1.5vh,20px);">
+          OBS WEBSOCKET SETUP
+        </div>
+        <p style="font-size:clamp(12px,1.3vw,16px);color:#c0a040;line-height:1.8;margin-bottom:clamp(10px,1.5vh,18px);">
+          To enable Kill Stream, do this one-time setup in OBS:
+        </p>
+        <ol style="font-size:clamp(12px,1.3vw,16px);color:#8a6a20;line-height:2;
+                   padding-left:clamp(16px,2vw,24px);margin-bottom:clamp(16px,2vh,24px);">
+          <li>In OBS, click <strong style="color:#ffc820;">Tools</strong> in the top menu</li>
+          <li>Select <strong style="color:#ffc820;">WebSocket Server Settings</strong></li>
+          <li>Check <strong style="color:#ffc820;">Enable WebSocket Server</strong></li>
+          <li>Uncheck <strong style="color:#ffc820;">Enable Authentication</strong></li>
+          <li>Click <strong style="color:#ffc820;">OK</strong> — done</li>
+        </ol>
+        <p style="font-size:clamp(10px,1.1vw,13px);color:#6a5020;line-height:1.6;">
+          No password needed for local connections. The overlay handles the rest automatically.
+        </p>
+        <button onclick="toggleKsInfo()" type="button"
+          style="margin-top:clamp(16px,2vh,24px);width:100%;padding:clamp(10px,1.5vh,16px);
+                 border:none;border-radius:8px;background:linear-gradient(135deg,#ffd700,#ffaa00);
+                 color:#1a0e00;font-family:'Bebas Neue',sans-serif;
+                 font-size:clamp(16px,2vw,24px);letter-spacing:3px;cursor:pointer;">
+          GOT IT
+        </button>
+      </div>
+    </div>
+
+    <!-- ── MIC STATUS DEBUG ──────────────────────────────── -->
+    <div id="mic-debug" style="text-align:center; font-size:11px; font-family:'Space Mono',monospace;
+         letter-spacing:1px; padding:5px 10px; border-radius:4px; margin-bottom:6px;
+         background:rgba(0,0,0,0.4); color:#888;">
+      🎙 MIC: checking…
+    </div>
+
+    <!-- ── LAUNCH BUTTONS ─────────────────────────────────── -->
+    <button class="launch-btn" onclick="launch()">LAUNCH OVERLAY</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:clamp(8px,1.2vw,14px);margin-top:clamp(4px,0.6vh,8px);">
+      <button class="secondary-btn btn-test" onclick="testSwear()">TEST SWEAR</button>
+      <button class="secondary-btn btn-preview" onclick="previewSpill()">PREVIEW SPILL</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ OVERLAY ═══════ -->
+<div id="overlay">
+  <!-- Test mode back button — only visible when testMode is active -->
+  <button id="test-back-btn" onclick="exitTestMode()"
+    style="display:none; position:fixed; top:20px; left:20px; z-index:9999;
+           background:rgba(10,8,0,0.85); border:1px solid #f5a623;
+           color:#f5a623; font-size:14px; font-weight:700;
+           padding:8px 16px; border-radius:6px; cursor:pointer;
+           letter-spacing:1px; text-transform:uppercase;
+           font-family:'Space Mono',monospace; pointer-events:all;">
+    ← Back to Setup
+  </button>
+  <div id="jar-wrap">
+    <div id="jar-scaler-outer">
+    <div id="jar-scaler">
+    <div id="jar-container">
+      <div id="word-badge"></div>
+      <div id="mic-status"></div>
+      <div id="mic-error" style="display:none; position:absolute; top:18px; left:50%; transform:translateX(-50%);
+           background:rgba(180,0,0,0.85); color:#fff; font-size:11px; font-weight:700;
+           padding:4px 10px; border-radius:4px; letter-spacing:1px; white-space:nowrap;
+           font-family:'Space Mono',monospace; z-index:100;"></div>
+      <div id="jar-fill"></div>
+      <div id="jar-overflow"></div>
+
+      <!-- Glass crack overlay — drawn at impact -->
+      <div id="jar-crack-overlay">
+        <svg viewBox="0 0 170 230" style="width:100%;height:100%;" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path class="crack-line" d="M85,210 L45,165 L22,135" stroke="rgba(255,255,255,0.95)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="crack-line" d="M85,210 L128,162 L152,128" stroke="rgba(255,255,255,0.9)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path class="crack-line" d="M85,210 L68,148 L45,95" stroke="rgba(255,255,255,0.82)" stroke-width="1.4" stroke-linecap="round"/>
+          <path class="crack-line" d="M85,210 L102,142 L122,88" stroke="rgba(255,255,255,0.82)" stroke-width="1.4" stroke-linecap="round"/>
+          <path class="crack-line" d="M85,210 L85,135 L92,62" stroke="rgba(255,255,255,0.72)" stroke-width="1.2" stroke-linecap="round"/>
+          <path class="crack-line" d="M85,210 L48,214 L32,225" stroke="rgba(255,255,255,0.65)" stroke-width="1" stroke-linecap="round"/>
+          <path class="crack-line" d="M85,210 L118,215 L138,224" stroke="rgba(255,255,255,0.65)" stroke-width="1" stroke-linecap="round"/>
+          <path class="crack-line" d="M60,172 L48,155 L40,160" stroke="rgba(255,255,255,0.45)" stroke-width="0.9" stroke-linecap="round"/>
+          <path class="crack-line" d="M110,168 L122,152 L130,158" stroke="rgba(255,255,255,0.45)" stroke-width="0.9" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <svg id="jar-svg" viewBox="0 0 170 230" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+        <!-- ── FLAT SCREW-CAP LID ── -->
+        <rect id="jsv-lid" x="20" y="4" width="130" height="26" rx="4"
+          fill="rgba(200,160,40,0.22)" stroke="rgba(255,210,60,0.7)" stroke-width="3.5"/>
+        <line x1="20" y1="13" x2="150" y2="13" stroke="rgba(255,210,60,0.28)" stroke-width="1"/>
+        <line x1="20" y1="21" x2="150" y2="21" stroke="rgba(255,210,60,0.28)" stroke-width="1"/>
+        <rect id="jsv-lid-inner" x="62" y="7" width="46" height="6" rx="3"
+          fill="rgba(255,200,40,0.20)"/>
+
+        <!-- ── BODY — same width as lid, tiny mouth taper only ── -->
+        <!-- Mouth (y=30→42): x=26→144  Body (y=42→192): x=21→149  ~matches lid width -->
+        <path id="jsv-body"
+          d="M26,30 L21,42 L21,192 Q21,218 85,218 Q149,218 149,192 L149,42 L144,30 Z"
+          fill="rgba(255,200,40,0.06)" stroke="rgba(255,210,60,0.58)" stroke-width="3.5"/>
+
+        <!-- Left glass highlight -->
+        <path d="M28,48 Q23,100 24,160"
+          stroke="rgba(255,255,255,0.22)" stroke-width="4.5" stroke-linecap="round"/>
+        <!-- Subtle right shine -->
+        <path d="M142,52 Q147,96 146,130"
+          stroke="rgba(255,255,255,0.08)" stroke-width="2.5" stroke-linecap="round"/>
+
+        <!-- ── INTERIOR BOTTOM OVAL ── -->
+        <ellipse id="jsv-bottom" cx="85" cy="207" rx="60" ry="11"
+          fill="rgba(200,160,20,0.14)" stroke="rgba(255,200,50,0.40)" stroke-width="2.5"/>
+
+        <!-- ── $#@% TEXT — upper portion of jar ── -->
+        <text id="jsv-label-txt-outline" x="85" y="108" text-anchor="middle"
+          font-family="Arial Black, Impact, Haettenschweiler, sans-serif"
+          font-size="37" font-weight="900" letter-spacing="1"
+          fill="none" stroke="rgba(255,210,60,0.55)" stroke-width="4"
+          paint-order="stroke">$#@%</text>
+        <text id="jsv-label-txt" x="85" y="108" text-anchor="middle"
+          font-family="Arial Black, Impact, Haettenschweiler, sans-serif"
+          font-size="37" font-weight="900" letter-spacing="1"
+          fill="rgba(255,210,60,0.50)">$#@%</text>
+
+      </svg>
+
+      <div id="jar-text">
+        <div id="jar-count-display">$0</div>
+      </div>
+    </div>
+    </div><!-- /#jar-scaler -->
+    </div><!-- /#jar-scaler-outer -->
+
+    <div id="jar-label-strip">
+      <span id="strip-label">0 / 10 swears</span>
+      <div id="strip-btns-row">
+        <button class="strip-btn" onclick="manualSwear()">+1</button>
+        <button class="strip-btn" onclick="resetOverlay()">RESET</button>
+        <button class="strip-btn" onclick="goSetup()">SETUP</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="milestone-flash"></div>
+  <div id="milestone-word"><span id="milestone-word-text"></span></div>
+
+  <div id="spill-layer">
+    <div id="money-scrim"></div>
+    <div id="crash-flash"></div>
+    <div id="game-over">
+      <div id="go-title">JAR FULL</div>
+      <div id="go-sub"></div>
+      <div id="countdown-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ──────────────────────────────────────────────────────────────────
+let cfg              = {};
+let swearCount       = 0;
+let spilled          = false;
+let teetering        = false;
+let overflowing      = false;
+let overflowTO       = null;
+let recognition      = null;
+let isListening      = false;
+let autoResetTO      = null;
+let cdInterval       = null;
+let spillTimers      = [];   // all triggerSpill timeouts — cleared on manual reset
+let jarTipAnim       = null; // reference to the WAAPI tip animation — cancelled on reset
+let rainTO           = null;
+let audioCtx         = null;
+let lastSwearTime    = 0;   // combo detection
+let rainActive       = false;
+let activeSpillAudio = null;
+let milestonesHit    = new Set();  // tracks which tiers (1/2/3) already fired
+let testMode         = false;       // true while TEST SWEAR persistent mode is active
+
+const MONEY_EMOJIS = ['💵','💵','💵','💴','💶','💷','🪙','🪙','💰','💸','💵','💵','🪙','💵'];
+const COIN_EMOJIS  = ['🪙','🪙','🪙','💰','🪙','🪙'];
+const BILL_EMOJIS  = ['💵','💵','💴','💶','💷','💸','💵','💵','💵'];
+const SHARDS       = ['✦','◆','◇','▲','△','◉','⬡','⬢','⬟','◈'];
+// Candy-packed fill: 9 cols × 14px pitch, 16px font = natural overlap, no gaps
+const JAR_COLS  = 9;
+const JAR_ROW_H = 14;   // vertical step between rows (less than font-size = overlap)
+const JAR_MAX   = 90;   // 10 full rows fills jar to ~89% height
+
+// ─── AUDIO ──────────────────────────────────────────────────────────────────
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+// Classic TV censorship bleep — near-instant attack, flat sustain, clean cutoff
+function playBleep() {
+  const ctx = getAudio();
+  const t0  = ctx.currentTime;
+
+  // Primary 1 kHz sine — the canonical TV censor frequency
+  const osc1 = ctx.createOscillator();
+  const g1   = ctx.createGain();
+  osc1.type = 'sine';
+  osc1.frequency.value = 1000;
+  g1.gain.setValueAtTime(0, t0);
+  g1.gain.linearRampToValueAtTime(0.45, t0 + 0.004);  // near-instant attack
+  g1.gain.setValueAtTime(0.45, t0 + 0.42);            // flat sustained tone
+  g1.gain.linearRampToValueAtTime(0, t0 + 0.46);      // hard cutoff
+  osc1.connect(g1); g1.connect(ctx.destination);
+  osc1.start(t0); osc1.stop(t0 + 0.5);
+
+  // Subtle square overtone — gives the classic broadcast "hardness"
+  const osc2 = ctx.createOscillator();
+  const g2   = ctx.createGain();
+  osc2.type = 'square';
+  osc2.frequency.value = 1000;
+  g2.gain.setValueAtTime(0, t0);
+  g2.gain.linearRampToValueAtTime(0.03, t0 + 0.004);
+  g2.gain.setValueAtTime(0.03, t0 + 0.42);
+  g2.gain.linearRampToValueAtTime(0, t0 + 0.46);
+  osc2.connect(g2); g2.connect(ctx.destination);
+  osc2.start(t0); osc2.stop(t0 + 0.5);
+}
+
+// Ka-ching / money drop — fires 80ms after bleep
+function playMoneyDrop() {
+  const ctx = getAudio();
+  // Metallic coin impact
+  const osc1 = ctx.createOscillator(); const g1 = ctx.createGain();
+  osc1.type = 'triangle';
+  osc1.frequency.setValueAtTime(1200, ctx.currentTime);
+  osc1.frequency.exponentialRampToValueAtTime(500, ctx.currentTime + 0.06);
+  g1.gain.setValueAtTime(0.22, ctx.currentTime);
+  g1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+  osc1.connect(g1); g1.connect(ctx.destination);
+  osc1.start(); osc1.stop(ctx.currentTime + 0.2);
+  // Rising ka-ching chime
+  [880, 1100, 1440].forEach((f, i) => {
+    const osc = ctx.createOscillator(); const g = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = f;
+    const t = ctx.currentTime + 0.05 + i * 0.052;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.13, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    osc.connect(g); g.connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.25);
+  });
+}
+
+// Wooden/glass creak during jar sway
+function playCreak(pitch = 1) {
+  const ctx  = getAudio();
+  const osc  = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const dist = ctx.createWaveShaper();
+  const curve = new Float32Array(256);
+  for (let i = 0; i < 256; i++) {
+    const x = (i * 2) / 256 - 1;
+    curve[i] = (Math.PI + 80) * x / (Math.PI + 80 * Math.abs(x));
+  }
+  dist.curve = curve;
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(120 * pitch, ctx.currentTime);
+  osc.frequency.linearRampToValueAtTime(80 * pitch, ctx.currentTime + 0.18);
+  gain.gain.setValueAtTime(0.12, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+  osc.connect(dist); dist.connect(gain); gain.connect(ctx.destination);
+  osc.start(); osc.stop(ctx.currentTime + 0.25);
+}
+
+// Whoosh as jar falls
+function playWhoosh() {
+  const ctx  = getAudio();
+  const buf  = ctx.createBuffer(1, ctx.sampleRate * 0.6, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let s = 0; s < data.length; s++) {
+    data[s] = (Math.random() * 2 - 1) * Math.pow(1 - s / data.length, 0.5);
+  }
+  const src  = ctx.createBufferSource();
+  const gain = ctx.createGain();
+  const filt = ctx.createBiquadFilter();
+  filt.type = 'bandpass'; filt.frequency.value = 600; filt.Q.value = 0.8;
+  src.buffer = buf;
+  gain.gain.setValueAtTime(0, ctx.currentTime);
+  gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.05);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+  src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+  src.start();
+}
+
+// Glass shattering at impact
+function playGlassBreak() {
+  const ctx = getAudio();
+  for (let i = 0; i < 9; i++) {
+    const buf  = ctx.createBuffer(1, ctx.sampleRate * 0.8, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let s = 0; s < data.length; s++) {
+      data[s] = (Math.random() * 2 - 1) * Math.pow(1 - s / data.length, 1.1 + i * 0.2);
+    }
+    const src  = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    const filt = ctx.createBiquadFilter();
+    filt.type = 'highpass'; filt.frequency.value = 900 + i * 700;
+    src.buffer = buf;
+    gain.gain.setValueAtTime(0.45 - i * 0.03, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.7);
+    src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+    src.start(ctx.currentTime + i * 0.018);
+  }
+  const osc = ctx.createOscillator(); const g = ctx.createGain();
+  osc.frequency.setValueAtTime(90, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(15, ctx.currentTime + 0.35);
+  g.gain.setValueAtTime(0.8, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+  osc.connect(g); g.connect(ctx.destination);
+  osc.start(); osc.stop(ctx.currentTime + 0.35);
+}
+
+function playCoinClink() {
+  const ctx  = getAudio();
+  const osc  = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  const freq = 700 + Math.random() * 1000;
+  osc.frequency.setValueAtTime(freq, ctx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(freq * 0.5, ctx.currentTime + 0.25);
+  gain.gain.setValueAtTime(0.18, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start(); osc.stop(ctx.currentTime + 0.3);
+}
+
+function playCashRegister() {
+  const ctx = getAudio();
+  [880, 1100, 1320, 1560].forEach((f, i) => {
+    const osc = ctx.createOscillator(); const gain = ctx.createGain();
+    osc.type = 'square'; osc.frequency.value = f;
+    gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.055);
+    gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + i * 0.055 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.055 + 0.14);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(ctx.currentTime + i * 0.055);
+    osc.stop(ctx.currentTime + i * 0.055 + 0.18);
+  });
+}
+
+// ─── FAIL MUSIC ──────────────────────────────────────────────────────────────
+// Upload these 19 mastered WAV files alongside index.html on Netlify.
+const FAIL_TRACKS = [
+  'msj_1.mp3',
+  'msj_2.mp3',
+  'msj_3.mp3',
+  'msj_4.mp3',
+  'msj_5.mp3',
+  'msj_6.mp3',
+  'msj_7.mp3',
+  'msj_8.mp3',
+  'msj_9.mp3',
+  'msj_10.mp3',
+  'msj_11.mp3',
+  'msj_12.mp3',
+  'msj_13.mp3',
+  'msj_14.mp3',
+  'msj_15.mp3',
+  'msj_16.mp3',
+  'msj_17.mp3',
+  'msj_18.mp3',
+  'msj_19.mp3',
+];
+
+// Pre-load all tracks so there's zero delay at spill time
+const _failAudioPool = FAIL_TRACKS.map(src => {
+  const a = new Audio(src);
+  a.preload = 'auto';
+  a.onerror = () => {
+    a._loadFailed = true;
+    console.warn(`Swear Jar: audio track "${src}" failed to load — file missing or inaccessible`);
+  };
+  return a;
+});
+let _lastFailIndex = -1;  // track last pick to avoid immediate repeats
+
+function playSpillAudio() {
+  if (!cfg.failMusic) return;
+  // Only pick from tracks that loaded successfully
+  const available = _failAudioPool.filter(a => !a._loadFailed);
+  if (available.length === 0) return;  // no valid tracks — skip silently
+
+  let pick;
+  let attempts = 0;
+  do {
+    pick = available[Math.floor(Math.random() * available.length)];
+    attempts++;
+  } while (available.length > 1 && pick === _failAudioPool[_lastFailIndex] && attempts < 8);
+  _lastFailIndex = _failAudioPool.indexOf(pick);
+
+  if (activeSpillAudio) {
+    activeSpillAudio.pause();
+    activeSpillAudio.currentTime = 0;
+  }
+  activeSpillAudio = pick;
+  activeSpillAudio.volume = 1;
+  activeSpillAudio.currentTime = 0;
+  activeSpillAudio.play().catch(() => {});
+}
+
+function stopSpillAudio(immediate) {
+  if (!activeSpillAudio) return;
+  if (immediate) {
+    activeSpillAudio.pause();
+    activeSpillAudio.currentTime = 0;
+    activeSpillAudio = null;
+    return;
+  }
+  // Fade out over 800ms
+  const target = activeSpillAudio;
+  let vol = target.volume;
+  const step = setInterval(() => {
+    vol = Math.max(0, vol - 0.04);
+    target.volume = vol;
+    if (vol <= 0) {
+      clearInterval(step);
+      target.pause();
+      target.currentTime = 0;
+      if (activeSpillAudio === target) activeSpillAudio = null;
+    }
+  }, 32);
+}
+
+// ─── MILESTONE ESCALATION ────────────────────────────────────────────────────
+function playMilestoneSound(tier) {
+  const ctx = getAudio();
+  const t0  = ctx.currentTime;
+
+  if (tier === 1) {
+    // Quick ascending chime — 3 notes
+    [660, 880, 1100].forEach((f, i) => {
+      const osc = ctx.createOscillator(); const g = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = f;
+      const t = t0 + i * 0.09;
+      g.gain.setValueAtTime(0.18, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(t); osc.stop(t + 0.25);
+    });
+  } else if (tier === 2) {
+    // Cash register sting — 5 notes, louder
+    [660, 880, 1100, 1320, 1760].forEach((f, i) => {
+      const osc = ctx.createOscillator(); const g = ctx.createGain();
+      osc.type = i < 3 ? 'sine' : 'triangle'; osc.frequency.value = f;
+      const t = t0 + i * 0.07;
+      g.gain.setValueAtTime(0.26, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(t); osc.stop(t + 0.32);
+    });
+  } else {
+    // Tier 3 — dramatic alarm sting, sweeping tones
+    [[220, 440], [300, 600], [440, 880]].forEach(([f0, f1], i) => {
+      const osc = ctx.createOscillator(); const g = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(f0, t0 + i * 0.12);
+      osc.frequency.exponentialRampToValueAtTime(f1, t0 + i * 0.12 + 0.18);
+      g.gain.setValueAtTime(0.32, t0 + i * 0.12);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + i * 0.12 + 0.35);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(t0 + i * 0.12); osc.stop(t0 + i * 0.12 + 0.4);
+    });
+    // High bell overtone
+    const bell = ctx.createOscillator(); const bg = ctx.createGain();
+    bell.type = 'sine'; bell.frequency.value = 2200;
+    bg.gain.setValueAtTime(0.18, t0 + 0.05);
+    bg.gain.exponentialRampToValueAtTime(0.001, t0 + 0.6);
+    bell.connect(bg); bg.connect(ctx.destination);
+    bell.start(t0 + 0.05); bell.stop(t0 + 0.65);
+  }
+}
+
+function spawnMilestoneBurst(tier) {
+  const jar    = document.getElementById('jar-container');
+  const rect   = jar.getBoundingClientRect();
+  const ox     = rect.left + rect.width  * 0.5;
+  const oy     = rect.top  + rect.height * 0.35;
+  const counts = [28, 60, 100][tier - 1];
+  const spread = [160, 270, 400][tier - 1];
+
+  for (let i = 0; i < counts; i++) {
+    const el  = document.createElement('div');
+    el.className = 'burst-particle';
+    el.style.position = 'fixed';
+    el.style.zIndex   = '490';
+    el.textContent    = MONEY_EMOJIS[Math.floor(Math.random() * MONEY_EMOJIS.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const dist  = 20 + Math.random() * spread;
+    const size  = 14 + Math.random() * (tier * 14);
+    const dur   = 0.45 + Math.random() * 0.45;
+    const delay = Math.random() * 0.09;
+    el.style.left = `${ox}px`;
+    el.style.top  = `${oy}px`;
+    el.style.setProperty('--btx',    `${Math.cos(angle) * dist}px`);
+    el.style.setProperty('--bty',    `${Math.sin(angle) * dist - spread * 0.28}px`);
+    el.style.setProperty('--brot',   `${(Math.random()-0.5)*540}deg`);
+    el.style.setProperty('--bfs',    `${size}px`);
+    el.style.setProperty('--bd',     `${dur}s`);
+    el.style.setProperty('--bdelay', `${delay}s`);
+    document.body.appendChild(el);
+    // Fade and clean up — milestone bursts don't stay like confetti
+    setTimeout(() => {
+      el.style.transition = 'opacity 0.35s ease';
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), 400);
+    }, (dur + delay) * 1000 + 150);
+  }
+}
+
+const MILESTONE_WORDS = {
+  1: ['CHILL!',    'EASE UP!',  'WATCH IT, BUD!',       'RELAX!'],
+  2: ['WOAH!',     'ENOUGH!',   'BRO STOP',              'WOW...'],
+  3: ['YUR DONE.', 'BABY SLOW DOWN!', "YIKES!", "THAT'S IT!"],
+};
+
+function triggerMilestone(tier) {
+  // Screen flash
+  const flash = document.getElementById('milestone-flash');
+  flash.className = ''; void flash.offsetWidth;
+  flash.className = `tier-${tier}`;
+
+  // Screen shake — escalates per tier
+  const shakeClass = `mshake${tier}`;
+  document.body.classList.remove('mshake1','mshake2','mshake3');
+  void document.body.offsetWidth;
+  document.body.classList.add(shakeClass);
+  setTimeout(() => document.body.classList.remove(shakeClass), 700);
+
+  // Big word slam
+  const words = MILESTONE_WORDS[tier] || ['!'];
+  const word  = words[Math.floor(Math.random() * words.length)];
+  const wEl   = document.getElementById('milestone-word-text');
+  if (wEl) {
+    wEl.textContent = word;
+    wEl.className   = '';           // reset
+    void wEl.offsetWidth;           // force reflow so animation restarts
+    wEl.className   = `slam-tier-${tier} slamming`;
+  }
+
+  // Particle burst around jar
+  spawnMilestoneBurst(tier);
+
+  // Sound
+  playMilestoneSound(tier);
+}
+
+// ─── JAR COLOR ───────────────────────────────────────────────────────────────
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return { r, g, b };
+}
+
+function applyJarColor(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  // Darkened variant for lid/neck shadow tones
+  const dr = Math.round(r * 0.78), dg = Math.round(g * 0.78), db = Math.round(b * 0.78);
+
+  const setEl = (id, attrs) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+  };
+
+  setEl('jsv-lid',              { fill: `rgba(${dr},${dg},${db},0.22)`, stroke: `rgba(${r},${g},${b},0.7)` });
+  setEl('jsv-lid-inner',        { fill: `rgba(${r},${g},${b},0.20)` });
+  setEl('jsv-body',             { fill: `rgba(${r},${g},${b},0.06)`, stroke: `rgba(${r},${g},${b},0.58)` });
+  setEl('jsv-bottom',           { fill: `rgba(${dr},${dg},${db},0.14)`, stroke: `rgba(${r},${g},${b},0.40)` });
+  setEl('jsv-label-txt-outline',{ stroke: `rgba(${r},${g},${b},0.55)` });
+  setEl('jsv-label-txt',        { fill:   `rgba(${r},${g},${b},0.50)` });
+
+  // Mirror colors onto the menu jar mascot
+  setEl('mj-lid',    { fill: `rgba(${dr},${dg},${db},0.22)`, stroke: `rgba(${r},${g},${b},0.7)` });
+  setEl('mj-body',   { fill: `rgba(${r},${g},${b},0.07)`,    stroke: `rgba(${r},${g},${b},0.58)` });
+  setEl('mj-bottom', { fill: `rgba(${dr},${dg},${db},0.14)`, stroke: `rgba(${r},${g},${b},0.40)` });
+
+  // Rewrite glow keyframes to match the chosen color
+  let styleEl = document.getElementById('jar-color-style');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'jar-color-style';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = `
+    @keyframes jar-breathe {
+      0%,100% { filter: drop-shadow(0 0 3px rgba(${r},${g},${b},0.18)); }
+      50%      { filter: drop-shadow(0 0 14px rgba(${r},${g},${b},0.60)); }
+    }
+    @keyframes jar-warn {
+      0%,100% { filter: drop-shadow(0 0 6px rgba(${r},${g},${b},0.4)); }
+      50%      { filter: drop-shadow(0 0 22px rgba(${r},${g},${b},0.95)); }
+    }
+    @keyframes menu-jar-breathe {
+      0%,100% { filter: drop-shadow(0 0 8px rgba(${r},${g},${b},0.30)); }
+      50%      { filter: drop-shadow(0 0 22px rgba(${r},${g},${b},0.70)); }
+    }
+  `;
+}
+
+// Swatch quick-pick: update color picker + preview jar live
+function initSwatches() {
+  document.querySelectorAll('.swatch-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const c = btn.dataset.color;
+      document.getElementById('cfg-jar-color').value = c;
+      applyJarColor(c);
+    });
+  });
+  document.getElementById('cfg-jar-color').addEventListener('input', e => {
+    applyJarColor(e.target.value);
+  });
+}
+// ─── LOCALSTORAGE PERSISTENCE ────────────────────────────────────────────────
+const LS_PREFIX = 'sj_';
+const LS_FIELDS = [
+  'limit','cost','consequence','resetTime','position','jarColor',
+  'failMusic','killStream','words','jarSize','language',
+  'twitchChannel','bitsThreshold','donationKeyword','obsWsUrl','obsWsPass',
+  'tiktokBridgeUrl','tiktokGiftThreshold'
+];
+
+function saveConfig() {
+  try {
+    localStorage.setItem(LS_PREFIX+'limit',           document.getElementById('cfg-limit').value);
+    localStorage.setItem(LS_PREFIX+'cost',            document.getElementById('cfg-cost').value);
+    localStorage.setItem(LS_PREFIX+'consequence',     document.getElementById('cfg-consequence').value);
+    localStorage.setItem(LS_PREFIX+'resetTime',       document.getElementById('cfg-reset-time').value);
+    localStorage.setItem(LS_PREFIX+'position',        document.querySelector('.pos-btn.active')?.dataset.pos || 'tl');
+    localStorage.setItem(LS_PREFIX+'jarColor',        document.getElementById('cfg-jar-color').value);
+    localStorage.setItem(LS_PREFIX+'failMusic',       document.getElementById('cfg-fail-music').checked ? '1' : '0');
+    localStorage.setItem(LS_PREFIX+'killStream',      document.getElementById('cfg-kill-stream').checked ? '1' : '0');
+    localStorage.setItem(LS_PREFIX+'words',           document.getElementById('cfg-words').value);
+    localStorage.setItem(LS_PREFIX+'jarSize',         document.querySelector('.size-btn.active')?.dataset.size || 'M');
+    localStorage.setItem(LS_PREFIX+'language',        document.getElementById('cfg-language')?.value || 'en-US');
+    localStorage.setItem(LS_PREFIX+'twitchChannel',   document.getElementById('cfg-twitch-channel')?.value || '');
+    localStorage.setItem(LS_PREFIX+'bitsThreshold',   document.getElementById('cfg-bits-threshold')?.value || '0');
+    localStorage.setItem(LS_PREFIX+'donationKeyword', document.getElementById('cfg-donation-keyword')?.value || '');
+    localStorage.setItem(LS_PREFIX+'obsWsUrl',           document.getElementById('cfg-obs-url')?.value || 'ws://localhost:4455');
+    localStorage.setItem(LS_PREFIX+'obsWsPass',          document.getElementById('cfg-obs-pass')?.value || '');
+    localStorage.setItem(LS_PREFIX+'tiktokBridgeUrl',    document.getElementById('cfg-tiktok-url')?.value || 'ws://localhost:21213');
+    localStorage.setItem(LS_PREFIX+'tiktokGiftThreshold',document.getElementById('cfg-tiktok-threshold')?.value || '0');
+  } catch(e) { console.warn('Swear Jar: localStorage unavailable', e); }
+}
+
+function loadConfig() {
+  try {
+    const get  = (k, def) => { const v = localStorage.getItem(LS_PREFIX+k); return v !== null ? v : def; };
+    const getB = (k, def) => get(k, def ? '1' : '0') === '1';
+
+    document.getElementById('cfg-limit').value           = get('limit', '10');
+    document.getElementById('cfg-cost').value            = get('cost', '1');
+    document.getElementById('cfg-consequence').value     = get('consequence', 'STREAM OVER');
+    document.getElementById('cfg-reset-time').value      = get('resetTime', '30');
+    document.getElementById('cfg-jar-color').value       = get('jarColor', '#ffd700');
+    document.getElementById('cfg-fail-music').checked    = getB('failMusic', true);
+    document.getElementById('cfg-kill-stream').checked   = getB('killStream', false);
+    document.getElementById('cfg-words').value           = get('words', 'damn, hell, crap, shit, fuck, ass, bitch, bastard, dammit, bloody');
+    if (document.getElementById('cfg-language'))        document.getElementById('cfg-language').value        = get('language', 'en-US');
+    if (document.getElementById('cfg-twitch-channel')) document.getElementById('cfg-twitch-channel').value  = get('twitchChannel', '');
+    if (document.getElementById('cfg-bits-threshold')) document.getElementById('cfg-bits-threshold').value  = get('bitsThreshold', '0');
+    if (document.getElementById('cfg-donation-keyword')) document.getElementById('cfg-donation-keyword').value = get('donationKeyword', '');
+    if (document.getElementById('cfg-obs-url'))            document.getElementById('cfg-obs-url').value            = get('obsWsUrl', 'ws://localhost:4455');
+    if (document.getElementById('cfg-obs-pass'))           document.getElementById('cfg-obs-pass').value           = get('obsWsPass', '');
+    if (document.getElementById('cfg-tiktok-url'))         document.getElementById('cfg-tiktok-url').value         = get('tiktokBridgeUrl', 'ws://localhost:21213');
+    if (document.getElementById('cfg-tiktok-threshold'))   document.getElementById('cfg-tiktok-threshold').value   = get('tiktokGiftThreshold', '0');
+
+    // Restore position button
+    const pos = get('position', 'tl');
+    document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('active'));
+    const posBtn = document.getElementById('pos-' + pos);
+    if (posBtn) posBtn.classList.add('active');
+
+    // Restore size button
+    const size = get('jarSize', 'M');
+    document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+    const sizeBtn = document.querySelector(`.size-btn[data-size="${size}"]`);
+    if (sizeBtn) sizeBtn.classList.add('active');
+
+    // Sync labels
+    const fmCb = document.getElementById('cfg-fail-music');
+    const fmLbl = document.getElementById('fail-music-label');
+    if (fmLbl) fmLbl.textContent = fmCb.checked ? 'ON' : 'OFF';
+
+    const ksCb = document.getElementById('cfg-kill-stream');
+    const ksLbl = document.getElementById('kill-stream-label');
+    if (ksLbl) {
+      ksLbl.textContent = ksCb.checked ? 'ON' : 'OFF';
+      ksLbl.style.color = ksCb.checked ? '#ff4455' : '#5a4a10';
+    }
+
+    // Sync reset time preset buttons
+    const rt = parseInt(get('resetTime', '30'));
+    document.querySelectorAll('.preset-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.textContent) === rt);
+    });
+
+    // Apply jar color from saved value
+    applyJarColor(get('jarColor', '#ffd700'));
+
+  } catch(e) { console.warn('Swear Jar: could not load config', e); }
+}
+
+// ─── JAR ZOOM ────────────────────────────────────────────────────────────────
+// Uses transform:scale() on #jar-scaler (not zoom) so WAAPI tip animation
+// stays pixel-aligned in OBS Chromium for all 4 corner positions.
+const JAR_ZOOM = { S: 0.45, M: 0.62, L: 0.82 };
+function applyJarZoom(size) {
+  const scale  = JAR_ZOOM[size] || 0.62;
+  const scaler = document.getElementById('jar-scaler');
+  const outer  = document.getElementById('jar-scaler-outer');
+  const wrap   = document.getElementById('jar-wrap');
+  // Scale the inner scaler; outer div holds the exact visual footprint in the flex column.
+  // Strip inherits width via align-items:stretch on jar-wrap — no separate width update needed.
+  if (scaler) scaler.style.transform = `scale(${scale})`;
+  const scaledW = `${170 * scale}px`;
+  const scaledH = `${230 * scale}px`;
+  if (outer) { outer.style.width = scaledW; outer.style.height = scaledH; }
+  if (wrap)  wrap.style.width  = scaledW;
+}
+function setJarSize(s, btn) {
+  document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  cfg.jarSize = s;
+  // Apply live if overlay is showing
+  if (document.getElementById('overlay').style.display !== 'none') applyJarZoom(s);
+}
+
+// ─── TAG INPUT ───────────────────────────────────────────────────────────────
+function initTagInput() {
+  let container = document.getElementById('cfg-words-tags');
+  const hidden  = document.getElementById('cfg-words');
+  if (!container || !hidden) return;
+
+  // Clone container to wipe any previously-attached event listeners
+  const fresh = container.cloneNode(false);
+  container.parentNode.replaceChild(fresh, container);
+  container = fresh;
+
+  // Parse current word list from hidden input
+  let words = hidden.value.split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+
+  function syncHidden() {
+    hidden.value = words.join(', ');
+  }
+
+  function renderChip(word) {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    const txt = document.createTextNode(word + ' ');
+    chip.appendChild(txt);
+    const btn = document.createElement('button');
+    btn.className = 'tag-remove';
+    btn.type = 'button';
+    btn.textContent = '×';
+    btn.title = 'Remove "' + word + '"';
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      words = words.filter(w => w !== word);
+      syncHidden();
+      chip.remove();
+    });
+    chip.appendChild(btn);
+    return chip;
+  }
+
+  function addWord(raw) {
+    const w = raw.trim().toLowerCase().replace(/,/g, '');
+    if (!w || words.includes(w)) return;
+    words.push(w);
+    syncHidden();
+    container.insertBefore(renderChip(w), inp);
+  }
+
+  // Build initial chips
+  words.forEach(w => container.appendChild(renderChip(w)));
+
+  // Text input at end of chips
+  const inp = document.createElement('input');
+  inp.id = 'tag-input-field';
+  inp.type = 'text';
+  inp.placeholder = 'add word…';
+  container.appendChild(inp);
+
+  // Click anywhere in container focuses input
+  container.addEventListener('click', () => inp.focus());
+
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addWord(inp.value);
+      inp.value = '';
+    } else if (e.key === ',') {
+      e.preventDefault();
+      addWord(inp.value);
+      inp.value = '';
+    } else if (e.key === 'Backspace' && inp.value === '' && words.length) {
+      const last = words[words.length - 1];
+      words.pop();
+      syncHidden();
+      const chips = container.querySelectorAll('.tag-chip');
+      if (chips.length) chips[chips.length - 1].remove();
+    }
+  });
+
+  // Handle pasted comma-separated text
+  inp.addEventListener('input', () => {
+    if (inp.value.includes(',')) {
+      inp.value.split(',').forEach(p => addWord(p));
+      inp.value = '';
+    }
+  });
+
+  // Commit on blur
+  inp.addEventListener('blur', () => {
+    if (inp.value.trim()) {
+      addWord(inp.value);
+      inp.value = '';
+    }
+  });
+}
+
+// ── Pre-warm mic permission on page load ──────────────────────────────────────
+// Calling getUserMedia early triggers OBS/browser permission prompt before Launch is hit.
+// We immediately stop the stream — this is only to unlock the permission gate.
+function setMicDebug(msg, color) {
+  // Runs after DOMContentLoaded — safe to call anytime after that
+  const el = document.getElementById('mic-debug');
+  if (!el) return;
+  el.textContent = '🎙 MIC: ' + msg;
+  el.style.color = color || '#888';
+  el.style.background = color ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.4)';
+}
+
+function runMicCheck() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    setMicDebug('API not available in this browser', '#ff4444');
+  } else if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    setMicDebug('Speech Recognition not supported', '#ff4444');
+  } else {
+    // OBS hangs getUserMedia indefinitely when mic hasn't been allowed yet (no reject).
+    // Timeout after 4s to show the "click Interact" prompt.
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        setMicDebug('Click Interact in OBS → Allow mic', '#f5a623');
+      }
+    }, 4000);
+
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        clearTimeout(timeout);
+        if (settled) return;
+        settled = true;
+        stream.getTracks().forEach(t => t.stop());
+        setMicDebug('READY — mic access granted ✓', '#00e676');
+      })
+      .catch(err => {
+        clearTimeout(timeout);
+        if (settled) return;
+        settled = true;
+        const msgs = {
+          'NotAllowedError':  'BLOCKED — click Interact in OBS and allow mic',
+          'NotFoundError':    'NO MIC FOUND — check your input device',
+          'NotReadableError': 'MIC IN USE — another app is using the mic',
+          'SecurityError':    'SECURITY BLOCK — contact support',
+        };
+        setMicDebug(msgs[err.name] || ('MIC ERROR: ' + err.name), '#ff4444');
+      });
+  }
+}
+// Run after DOM is ready so mic-debug element exists
+document.addEventListener('DOMContentLoaded', runMicCheck);
+
+document.addEventListener('DOMContentLoaded', () => {
+  initSwatches();
+  loadConfig();   // restore saved settings — also applies jar color
+  initTagInput(); // render chips from the loaded hidden-input value
+
+  // Fail music ON/OFF label
+  const fmCb  = document.getElementById('cfg-fail-music');
+  const fmLbl = document.getElementById('fail-music-label');
+  fmCb.addEventListener('change', () => {
+    fmLbl.textContent = fmCb.checked ? 'ON' : 'OFF';
+  });
+
+  // Kill stream ON/OFF label
+  const ksCb  = document.getElementById('cfg-kill-stream');
+  const ksLbl = document.getElementById('kill-stream-label');
+  ksCb.addEventListener('change', () => {
+    ksLbl.textContent = ksCb.checked ? 'ON' : 'OFF';
+    ksLbl.style.color = ksCb.checked ? '#ff4455' : '#5a4a10';
+  });
+
+});
+
+// ─── SETUP ──────────────────────────────────────────────────────────────────
+function readConfig() {
+  cfg.limit           = parseInt(document.getElementById('cfg-limit').value)          || 10;
+  cfg.cost            = parseFloat(document.getElementById('cfg-cost').value)         || 1;
+  cfg.consequence     = document.getElementById('cfg-consequence').value              || 'STREAM OVER';
+  cfg.resetTime       = Math.min(120, parseInt(document.getElementById('cfg-reset-time').value) || 30);
+  cfg.position        = document.querySelector('.pos-btn.active')?.dataset.pos        || 'tl';
+  cfg.jarColor        = document.getElementById('cfg-jar-color').value                || '#ffd700';
+  cfg.failMusic       = document.getElementById('cfg-fail-music').checked;
+  cfg.killStream      = document.getElementById('cfg-kill-stream').checked;
+  cfg.jarSize         = document.querySelector('.size-btn.active')?.dataset.size      || 'M';
+  cfg.language        = document.getElementById('cfg-language')?.value                || 'en-US';
+  cfg.twitchChannel   = (document.getElementById('cfg-twitch-channel')?.value || '').trim().toLowerCase().replace(/^#/,'').replace(/[^a-z0-9_]/g,'');
+  cfg.bitsThreshold   = parseInt(document.getElementById('cfg-bits-threshold')?.value) || 0;
+  cfg.donationKeyword = (document.getElementById('cfg-donation-keyword')?.value || '').trim();
+  cfg.obsWsUrl             = (document.getElementById('cfg-obs-url')?.value || 'ws://localhost:4455').trim();
+  cfg.obsWsPass            = (document.getElementById('cfg-obs-pass')?.value || '').trim();
+  cfg.tiktokBridgeUrl      = (document.getElementById('cfg-tiktok-url')?.value || 'ws://localhost:21213').trim();
+  cfg.tiktokGiftThreshold  = parseInt(document.getElementById('cfg-tiktok-threshold')?.value) || 0;
+  document.getElementById('go-sub').textContent = cfg.consequence;
+}
+
+function previewSpill() {
+  unlockAudio();
+  readConfig();
+  cfg.words = [];
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('overlay').style.display = 'block';
+  applyJarColor(cfg.jarColor);
+  applyJarZoom(cfg.jarSize);
+  swearCount = cfg.limit; spilled = false; teetering = false; overflowing = false;
+  positionJar(); fillJarFull(); updateJarText();
+  setTimeout(triggerSpill, 300);
+}
+
+function launch() {
+  unlockAudio();
+  readConfig();
+  cfg.words = document.getElementById('cfg-words').value
+    .split(',').map(w => w.trim().toLowerCase()).filter(Boolean);
+  saveConfig();
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('overlay').style.display = 'block';
+  applyJarColor(cfg.jarColor);
+  applyJarZoom(cfg.jarSize);
+  positionJar(); updateJar(); startRecognition();
+  if (cfg.twitchChannel) connectTwitch(cfg.twitchChannel);
+  if (cfg.tiktokGiftThreshold > 0) connectTikTokBridge(cfg.tiktokBridgeUrl);
+}
+
+function positionJar() {
+  const w = document.getElementById('jar-wrap');
+  const p = cfg.position || 'tl';
+  // Top positions: push down 58px so the -44px word badge clears the screen edge
+  w.style.top    = p.startsWith('t') ? '82px' : 'auto';
+  w.style.bottom = p.startsWith('b') ? '70px' : 'auto';
+  w.style.left   = p.endsWith('l')   ? '24px' : 'auto';
+  w.style.right  = p.endsWith('r')   ? '24px' : 'auto';
+}
+
+// ─── JAR FILL — candy-packed: overlapping grid, zero visible gaps ──────────
+function makeEmojiSlot(index) {
+  const fillW = 132;
+  const fillH = 158;
+  const col   = index % JAR_COLS;
+  const row   = Math.floor(index / JAR_COLS);
+  // Honeycomb stagger (half-cell offset on odd rows) fills diagonal gaps
+  const stagger = (row % 2) * (fillW / JAR_COLS * 0.5);
+  const baseX = (col / JAR_COLS) * fillW + stagger;
+  // Uses `bottom` positioning — row 0 = bottom of jar, each row adds JAR_ROW_H upward
+  const baseY = row * JAR_ROW_H;
+  return {
+    // Tiny jitter (±2px) keeps it organic without creating holes
+    x: Math.max(-4, Math.min(fillW - 8, baseX + (Math.random() - 0.5) * 4)),
+    y: Math.max(0,  Math.min(fillH - 12, baseY + (Math.random() - 0.5) * 3)),
+  };
+}
+
+function addEmojiToFill(fill, index, animated) {
+  const em = document.createElement('span');
+  em.className = 'jar-emoji';
+  em.textContent = MONEY_EMOJIS[Math.floor(Math.random() * MONEY_EMOJIS.length)];
+  const rot  = (Math.random() - 0.5) * 50;   // mild rotation keeps them readable
+  const size = 15 + Math.random() * 4;        // 15–19px: large enough to overlap neighbours
+  const slot = makeEmojiSlot(index);
+  em.style.setProperty('--rot', `${rot}deg`);
+  em.style.left     = `${slot.x}px`;
+  em.style.bottom   = `${slot.y}px`;
+  em.style.fontSize = `${size}px`;
+  em.style.zIndex   = `${index}`;
+  if (animated) {
+    em.style.animationDelay = '0s';
+  } else {
+    em.style.animation = 'none';
+    em.style.transform = `rotate(${rot}deg)`;
+  }
+  fill.appendChild(em);
+}
+
+function updateJar() {
+  const pct    = Math.min(swearCount / cfg.limit, 1);
+  const target = Math.round(pct * JAR_MAX);
+  const fill   = document.getElementById('jar-fill');
+  const cur    = fill.children.length;
+  for (let i = cur; i < target; i++) addEmojiToFill(fill, i, true);
+  updateJarText();
+
+  const jar = document.getElementById('jar-container');
+  if (pct >= 0.9 && !teetering && !spilled) {
+    teetering = true;
+    jar.classList.remove('warn','danger','shaking','shaking-combo');
+    jar.classList.add('teetering');
+    playCashRegister();
+    startOverflow();
+  } else if (pct < 0.9) {
+    jar.classList.remove('warn','danger','teetering');
+    if (pct >= 0.65) jar.classList.add('danger');
+    else if (pct >= 0.4) jar.classList.add('warn');
+    teetering = false;
+  }
+}
+
+function fillJarFull() {
+  const fill = document.getElementById('jar-fill');
+  fill.innerHTML = '';
+  for (let i = 0; i < JAR_MAX; i++) addEmojiToFill(fill, i, false);
+}
+
+function formatDollars(amount) {
+  // Whole number → $X, decimal cost → $X.XX
+  return (cfg.cost % 1 === 0)
+    ? `$${Math.round(amount)}`
+    : `$${amount.toFixed(2)}`;
+}
+
+function updateJarText() {
+  document.getElementById('jar-count-display').textContent = formatDollars(swearCount * cfg.cost);
+  document.getElementById('strip-label').textContent = `${swearCount} / ${cfg.limit} swears`;
+}
+
+// ─── OVERFLOW ─────────────────────────────────────────────────────────────────
+function startOverflow() {
+  if (overflowing) return;
+  overflowing = true;
+  const container = document.getElementById('jar-overflow');
+  function spawnOverflowEmoji() {
+    if (!overflowing) return;
+    const em = document.createElement('span');
+    em.className = 'overflow-emoji';
+    em.textContent = MONEY_EMOJIS[Math.floor(Math.random() * MONEY_EMOJIS.length)];
+    const x0  = (Math.random() - 0.5) * 60;
+    const x1  = x0 + (Math.random() - 0.5) * 50;
+    const y1  = -(30 + Math.random() * 50);
+    const r0  = (Math.random() - 0.5) * 60;
+    const r1  = r0 + (Math.random() - 0.5) * 180;
+    const dur = 0.7 + Math.random() * 0.9;
+    em.style.fontSize = `${14 + Math.random() * 10}px`;
+    em.style.left = `${20 + Math.random() * 60}%`;
+    em.style.bottom = '0px';
+    em.style.setProperty('--of-x0',    `${x0}px`);
+    em.style.setProperty('--of-x1',    `${x1}px`);
+    em.style.setProperty('--of-y1',    `${y1}px`);
+    em.style.setProperty('--of-r0',    `${r0}deg`);
+    em.style.setProperty('--of-r1',    `${r1}deg`);
+    em.style.setProperty('--of-dur',   `${dur}s`);
+    em.style.setProperty('--of-delay', '0s');
+    container.appendChild(em);
+    setTimeout(() => em.remove(), dur * 1000 + 100);
+    overflowTO = setTimeout(spawnOverflowEmoji, 120 + Math.random() * 180);
+  }
+  spawnOverflowEmoji();
+}
+
+function stopOverflow() {
+  overflowing = false;
+  clearTimeout(overflowTO);
+  document.getElementById('jar-overflow').innerHTML = '';
+}
+
+// ─── SWEAR DETECTED ─────────────────────────────────────────────────────────
+function onSwear(word) {
+  if (spilled) return;
+  swearCount++;
+
+  // Combo detection — second swear within 2.5s
+  const now = Date.now();
+  const isCombo = (now - lastSwearTime) < 2500 && swearCount > 1;
+  lastSwearTime = now;
+
+  // Badge
+  const badge = document.getElementById('word-badge');
+  badge.classList.remove('combo');
+  if (isCombo) {
+    badge.textContent = `COMBO — "${word}"`;
+    badge.classList.add('show','combo');
+  } else {
+    badge.textContent = `"${word}"`;
+    badge.classList.add('show');
+  }
+  setTimeout(() => badge.classList.remove('show','combo'), 1600);
+
+  // Sounds: bleep immediately, ka-ching 80ms after
+  playBleep();
+  setTimeout(playMoneyDrop, 80);
+
+  // Shake jar
+  if (!teetering) {
+    const jar = document.getElementById('jar-container');
+    const shakeClass = isCombo ? 'shaking-combo' : 'shaking';
+    jar.classList.remove('shaking','shaking-combo');
+    void jar.offsetWidth;
+    jar.classList.add(shakeClass);
+    setTimeout(() => jar.classList.remove('shaking','shaking-combo'), 450);
+  }
+
+  updateJar();
+
+  // Milestone escalation at 25 / 50 / 75 % full
+  const pct = swearCount / cfg.limit;
+  [[0.25, 1],[0.50, 2],[0.75, 3]].forEach(([threshold, tier]) => {
+    if (pct >= threshold && !milestonesHit.has(tier)) {
+      milestonesHit.add(tier);
+      setTimeout(() => triggerMilestone(tier), 180); // slight delay so jar shake lands first
+    }
+  });
+
+  if (swearCount >= cfg.limit) setTimeout(triggerSpill, 200);
+}
+
+function unlockAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+// Manual +1 from overlay strip button
+function manualSwear() {
+  if (spilled) return;
+  unlockAudio();
+  onSwear('[+1]');
+}
+
+// Test Swear — launches persistent test mode with live mic recognition
+function testSwear() {
+  testMode = true;
+  launch();  // reads full config (words, language, jar settings) and starts mic recognition
+  document.getElementById('test-back-btn').style.display = 'block';
+}
+
+// Exit test mode — reset jar and return to setup
+function exitTestMode() {
+  testMode = false;
+  document.getElementById('test-back-btn').style.display = 'none';
+  goSetup();
+}
+
+// ─── SWEAR FLASH ─────────────────────────────────────────────────────────────
+function showSwearFlash() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position:fixed; inset:0; pointer-events:none; z-index:650;
+    overflow:hidden; animation:swear-flash-strobe 1.0s linear forwards;
+  `;
+
+  // Center giant + scattered smaller instances
+  const placements = [
+    { x:50,  y:50,  size:26, rot:0   },   // dead center — biggest
+    { x:16,  y:18,  size:10, rot:-18 },   // top left
+    { x:80,  y:14,  size: 9, rot: 14 },   // top right
+    { x:12,  y:76,  size: 9, rot:-22 },   // bottom left
+    { x:78,  y:78,  size:11, rot: 20 },   // bottom right
+    { x:50,  y:12,  size: 7, rot: -8 },   // top center
+    { x:50,  y:86,  size: 8, rot:  6 },   // bottom center
+  ];
+
+  placements.forEach(p => {
+    const el = document.createElement('div');
+    el.textContent = '$#@%';
+    el.style.cssText = `
+      position:absolute;
+      left:${p.x}%; top:${p.y}%;
+      font-size:${p.size}vw;
+      font-family:'Arial Black',Impact,Haettenschweiler,sans-serif;
+      font-weight:900; letter-spacing:0.04em; white-space:nowrap;
+      transform:translate(-50%,-50%) rotate(${p.rot}deg);
+      color:rgba(255,200,30,0.60);
+      text-shadow:0 0 50px rgba(255,200,0,0.7), 0 0 18px rgba(255,160,0,0.5);
+    `;
+    overlay.appendChild(el);
+  });
+
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.remove(), 800);
+}
+
+// ─── SPILL SEQUENCE ──────────────────────────────────────────────────────────
+function triggerSpill() {
+  spilled = true;
+  stopOverflow();
+  if (recognition) { try { recognition.stop(); } catch(e){} }
+  isListening = false;
+  // Lock jar controls so buttons can't be clicked mid-animation
+  document.getElementById('jar-wrap').style.pointerEvents = 'none';
+
+  const jar   = document.getElementById('jar-container');
+  const layer = document.getElementById('spill-layer');
+  layer.style.display = 'block';
+  jar.classList.remove('teetering','warn','danger','shaking','shaking-combo');
+
+  const tipsRight = (cfg.position || 'tl').endsWith('l');
+  animateJarTip(jar, tipsRight);
+
+  // Track all spill timers so manual reset can cancel them
+  spillTimers.forEach(t => clearTimeout(t));
+  spillTimers = [];
+
+  // Impact at 3140ms — crash frame lands at 3192ms (offset 0.760).
+  // playGlassBreak() staggers 9 shards across 144ms (3140–3284ms), bracketing the visual crash.
+  spillTimers.push(setTimeout(() => {
+    unlockAudio();
+    showGlassCracks();
+    showSwearFlash();   // $#@% strobes full-screen over the yellow impact flash
+    playGlassBreak();
+    playSpillAudio();   // random clip from uploaded tracks — plays over everything
+    const flash = document.getElementById('crash-flash');
+    flash.classList.remove('pop'); void flash.offsetWidth; flash.classList.add('pop');
+    document.body.classList.add('shaking');
+    setTimeout(() => document.body.classList.remove('shaking'), 750);
+    spawnShards();
+    confettiBomb();   // confetti fires at exact impact moment — no gap
+  }, 3140));
+
+  // Rain + scrim 80ms after impact — money curtain follows immediately behind confetti
+  spillTimers.push(setTimeout(() => {
+    document.getElementById('money-scrim').classList.add('darkened');
+    startMoneyRain();
+  }, 3220));
+
+  const resetSecs = cfg.resetTime || 30;
+  clearTimeout(autoResetTO); clearInterval(cdInterval);
+  spillTimers.push(setTimeout(() => {
+    startCountdown(resetSecs);
+    autoResetTO = setTimeout(() => {
+      clearInterval(cdInterval);
+      stopRain();
+      if (!testMode) killStream();   // bypass stream kill in test mode
+      resetOverlay();
+    }, resetSecs * 1000);
+  }, 5600));
+}
+
+// ─── JAR TIP — pendulum sway into free fall ───────────────────────────────
+function animateJarTip(jar, tipsRight) {
+  const d = tipsRight ? 1 : -1;
+  jar.style.transformOrigin = tipsRight ? 'bottom right' : 'bottom left';
+
+  unlockAudio();
+  // Creaks fire at each swing peak / trough (direction change), pitch escalates with amplitude.
+  // Times derived from keyframe offsets × 4200ms animation duration.
+  setTimeout(() => playCreak(0.70),   118);   // +2°  first tiny peak
+  setTimeout(() => playCreak(0.65),   294);   // -1.5° first trough
+  setTimeout(() => playCreak(0.85),   470);   // +4°  growing
+  setTimeout(() => playCreak(0.75),   651);   // -2.5° trough
+  setTimeout(() => playCreak(1.00),   832);   // +7°  getting serious
+  setTimeout(() => playCreak(0.85),  1008);   // -4°  trough
+  setTimeout(() => playCreak(1.18),  1189);   // +11° warning level
+  setTimeout(() => playCreak(0.92),  1365);   // -5.5° trough
+  setTimeout(() => playCreak(1.35),  1546);   // +16° big swing
+  setTimeout(() => playCreak(1.15),  1722);   // +24° biggest peak — last big sway
+  setTimeout(() => playCreak(0.98),  2218);   // +19° final hesitation before fall
+  // Whoosh fires 64ms before point of no return (2344ms) so it peaks right at the tipping moment
+  setTimeout(() => playWhoosh(),     2280);
+
+  const frames = [
+    // ── Phase 1: small organic oscillations, amplitude climbing ──────────────
+    { transform: 'rotate(0deg)',              offset: 0.000 },
+    { transform: `rotate(${d*2}deg)`,        offset: 0.028 },
+    { transform: `rotate(${d*-1.5}deg)`,     offset: 0.070 },
+    { transform: `rotate(${d*4}deg)`,        offset: 0.112 },
+    { transform: `rotate(${d*-2.5}deg)`,     offset: 0.155 },
+    { transform: `rotate(${d*7}deg)`,        offset: 0.198 },
+    { transform: `rotate(${d*-4}deg)`,       offset: 0.240 },
+    { transform: `rotate(${d*11}deg)`,       offset: 0.283 },
+    { transform: `rotate(${d*-5.5}deg)`,     offset: 0.325 },
+    { transform: `rotate(${d*16}deg)`,       offset: 0.368 },
+    // ── Phase 2: tipping point — jar reaches edge, hangs, pulls back ─────────
+    { transform: `rotate(${d*24}deg)`,       offset: 0.410 },
+    { transform: `rotate(${d*16}deg)`,       offset: 0.455 },  // tempts back
+    { transform: `rotate(${d*28}deg)`,       offset: 0.492 },  // pushes further
+    { transform: `rotate(${d*19}deg)`,       offset: 0.528 },  // last hesitation
+    { transform: `rotate(${d*33}deg)`,       offset: 0.558 },  // point of no return ←
+    // ── Phase 3: abrupt free-fall crash ─────────────────────────────────────
+    { transform: `rotate(${d*55}deg)`,       offset: 0.620 },
+    { transform: `rotate(${d*82}deg)`,       offset: 0.680 },
+    { transform: `rotate(${d*102}deg)`,      offset: 0.730 },
+    { transform: `rotate(${d*108}deg) translate(${d*3}px,2px)`, offset: 0.760 },
+    // ── Phase 4: settle bounce at 103deg ─────────────────────────────────────
+    { transform: `rotate(${d*99}deg)  translate(${d*1}px,0px)`, offset: 0.840 },
+    { transform: `rotate(${d*105}deg) translate(${d*2}px,1px)`, offset: 0.900 },
+    { transform: `rotate(${d*101}deg) translate(${d*1}px,1px)`, offset: 0.950 },
+    { transform: `rotate(${d*103}deg) translate(${d*2}px,1px)`, offset: 1.000 },
+  ];
+  // 4200ms total: pendulum phase ~0-2340ms, tipping ~2340-2640ms, crash ~2640-3190ms
+  jarTipAnim = jar.animate(frames, { duration: 4200, easing: 'linear', fill: 'forwards' });
+}
+
+// ─── GLASS CRACK VISUAL ──────────────────────────────────────────────────────
+function showGlassCracks() {
+  const overlay = document.getElementById('jar-crack-overlay');
+  overlay.classList.add('cracked');
+  const lines = overlay.querySelectorAll('.crack-line');
+  lines.forEach((line, i) => {
+    setTimeout(() => line.classList.add('draw'), i * 18);
+  });
+  // Fade out after shards have flown
+  setTimeout(() => {
+    overlay.style.transition = 'opacity 0.4s ease';
+    overlay.style.opacity = '0';
+  }, 820);
+}
+
+// ─── GLASS SHARDS ───────────────────────────────────────────────────────────
+function spawnShards() {
+  const layer = document.getElementById('spill-layer');
+  const jar   = document.getElementById('jar-container');
+  const rect  = jar.getBoundingClientRect();
+  const ox = rect.left + rect.width  * 0.5;
+  const oy = rect.top  + rect.height * 0.85;
+
+  for (let i = 0; i < 42; i++) {
+    const el = document.createElement('div');
+    el.className = 'glass-shard';
+    el.textContent = SHARDS[Math.floor(Math.random() * SHARDS.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const dist  = 70 + Math.random() * 320;
+    el.style.left  = `${ox}px`;
+    el.style.top   = `${oy}px`;
+    el.style.color = `rgba(${180+Math.random()*75},${220+Math.random()*35},255,${0.5+Math.random()*0.45})`;
+    el.style.setProperty('--gs',     `${5 + Math.random() * 14}px`);
+    el.style.setProperty('--gx',     `${Math.cos(angle)*dist}px`);
+    el.style.setProperty('--gy',     `${Math.sin(angle)*dist + 35}px`);
+    el.style.setProperty('--gr',     `${(Math.random()-0.5)*1200}deg`);
+    el.style.setProperty('--gd',     `${0.3 + Math.random() * 0.65}s`);
+    el.style.setProperty('--gdelay', `${Math.random() * 0.06}s`);
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), 1100);
+  }
+}
+
+// ─── CONFETTI BOMB — covers screen from frame 1 ──────────────────────────────
+// 320 particles from 6 origins: they fly fast to random positions and STAY.
+function confettiBomb() {
+  const layer = document.getElementById('spill-layer');
+  const jar   = document.getElementById('jar-container');
+  const rect  = jar.getBoundingClientRect();
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+
+  const origins = [
+    { x: rect.left + rect.width * 0.5, y: rect.top  + rect.height * 0.4 }, // jar
+    { x: W * 0.5,  y: H * 0.5 },   // center screen
+    { x: 0,        y: 0 },          // top-left
+    { x: W,        y: 0 },          // top-right
+    { x: 0,        y: H },          // bottom-left
+    { x: W,        y: H },          // bottom-right
+  ];
+  const counts = [130, 80, 28, 28, 28, 28]; // 320 total
+
+  origins.forEach((origin, oi) => {
+    for (let i = 0; i < counts[oi]; i++) {
+      const el = document.createElement('div');
+      el.className = 'burst-particle';
+      el.textContent = MONEY_EMOJIS[Math.floor(Math.random() * MONEY_EMOJIS.length)];
+      const destX = Math.random() * W;
+      const destY = Math.random() * H;
+      const dx    = destX - origin.x;
+      const dy    = destY - origin.y;
+      const size  = 34 + Math.random() * 58; // 34-92px
+      const dur   = 0.25 + Math.random() * 0.35;
+      const delay = Math.random() * 0.07;  // tight spread — all on screen within 320ms total
+      el.style.left = `${origin.x}px`;
+      el.style.top  = `${origin.y}px`;
+      el.style.setProperty('--btx',    `${dx}px`);
+      el.style.setProperty('--bty',    `${dy}px`);
+      el.style.setProperty('--brot',   `${(Math.random()-0.5)*720}deg`);
+      el.style.setProperty('--bfs',    `${size}px`);
+      el.style.setProperty('--bd',     `${dur}s`);
+      el.style.setProperty('--bdelay', `${delay}s`);
+      layer.appendChild(el);
+      // Particles stay on screen until resetOverlay() cleans them
+    }
+  });
+}
+
+// ─── MONEY RAIN — slow heavy curtain ────────────────────────────────────────
+function startMoneyRain() {
+  rainActive = true;
+  // Seed screen immediately at random heights
+  for (let i = 0; i < 80; i++) {
+    spawnBill(Math.random());
+    spawnCoin(Math.random());
+  }
+  let wave = 0;
+  function dropWave() {
+    if (!rainActive) return;
+    const n = 10 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < n; i++) spawnBill(0);
+    for (let i = 0; i < n; i++) spawnCoin(0);
+    if (wave % 4 === 0) setTimeout(playCoinClink, Math.random() * 80);
+    if (wave % 4 === 2) setTimeout(playCoinClink, Math.random() * 80);
+    wave++;
+    if (rainActive) rainTO = setTimeout(dropWave, 120);
+  }
+  dropWave();
+}
+
+function spawnBill(progress) {
+  const layer = document.getElementById('spill-layer');
+  const el    = document.createElement('div');
+  el.className = 'rain-particle';
+  el.textContent = BILL_EMOJIS[Math.floor(Math.random() * BILL_EMOJIS.length)];
+  const startSize = 50 + Math.random() * 40;
+  const dur   = 4.0 + Math.random() * 3.0;
+  const r0    = (Math.random()-0.5) * 50;
+  const r1    = r0 + (Math.random()-0.5) * 300;
+  const h     = window.innerHeight + 220;
+  const yStart = -100 + progress * h;
+  el.style.left     = `${-8 + Math.random() * 116}vw`;
+  el.style.top      = `${yStart}px`;
+  el.style.setProperty('--rd',    `${dur}s`);
+  el.style.setProperty('--rdelay','0s');
+  el.style.setProperty('--rfs',   `${startSize}px`);
+  el.style.setProperty('--r0',    `${r0}deg`);
+  el.style.setProperty('--r1',    `${r1}deg`);
+  el.style.setProperty('--rfh',   `${h - yStart}px`);
+  layer.appendChild(el);
+  setTimeout(() => el.remove(), (dur + 0.5) * 1000);
+}
+
+function spawnCoin(progress) {
+  const layer = document.getElementById('spill-layer');
+  const el    = document.createElement('div');
+  el.className = 'coin-particle';
+  el.textContent = COIN_EMOJIS[Math.floor(Math.random() * COIN_EMOJIS.length)];
+  const startSize = 40 + Math.random() * 30;
+  const dur   = 4.5 + Math.random() * 3.0;
+  const h     = window.innerHeight + 200;
+  const yStart = -70 + progress * h;
+  el.style.left     = `${-8 + Math.random() * 116}vw`;
+  el.style.top      = `${yStart}px`;
+  el.style.setProperty('--cd',    `${dur}s`);
+  el.style.setProperty('--cdelay','0s');
+  el.style.setProperty('--cfs',   `${startSize}px`);
+  el.style.setProperty('--c0',    `${(Math.random()-0.5)*60}deg`);
+  el.style.setProperty('--c1',    `${(Math.random()-0.5)*600}deg`);
+  el.style.setProperty('--cfh',   `${h - yStart}px`);
+  layer.appendChild(el);
+  setTimeout(() => el.remove(), (dur + 0.5) * 1000);
+}
+
+function stopRain() {
+  rainActive = false;
+  clearTimeout(rainTO);
+}
+
+// ─── COUNTDOWN TICK SOUND ────────────────────────────────────────────────────
+function playCountdownTick(isBill) {
+  const ctx  = getAudio();
+  const t0   = ctx.currentTime;
+  const osc  = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  // Bill = higher pitch, coin = lower — matches the alternating visual
+  osc.frequency.value = isBill ? 660 : 440;
+  gain.gain.setValueAtTime(0.18, t0);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.14);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start(t0); osc.stop(t0 + 0.18);
+}
+
+// ─── COUNTDOWN ───────────────────────────────────────────────────────────────
+function startCountdown(totalSecs) {
+  // Always kill any prior interval before starting a new one
+  clearInterval(cdInterval);
+  cdInterval = null;
+  const wrap = document.getElementById('countdown-wrap');
+  let remaining = totalSecs;
+  let useBill   = true;
+  function tick() {
+    if (remaining < 0) { clearInterval(cdInterval); return; }
+    wrap.innerHTML = '';
+    const face = document.createElement('div');
+    face.className = 'countdown-face';
+    const secs = String(remaining).padStart(2,'0');
+    if (useBill) {
+      face.innerHTML = `
+        <div class="bill-face">
+          <span class="bill-corner tl">${secs}</span>
+          <span class="bill-corner tr">${secs}</span>
+          <span class="bill-number">${remaining}</span>
+        </div>`;
+    } else {
+      face.innerHTML = `
+        <div class="coin-face">
+          <span class="coin-number">${remaining}</span>
+        </div>`;
+    }
+    wrap.appendChild(face);
+    playCountdownTick(useBill);  // tick fires exactly when number changes
+    useBill = !useBill;
+    remaining--;
+    if (remaining < 0) clearInterval(cdInterval);
+  }
+  tick();
+  cdInterval = setInterval(tick, 1000);
+}
+
+// ─── POSITION & RESET PRESET CONTROLS ────────────────────────────────────────
+function setPos(p) {
+  document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pos-' + p).classList.add('active');
+  // Apply live if the overlay is already running
+  if (document.getElementById('overlay').style.display !== 'none') {
+    cfg.position = p;
+    positionJar();
+  }
+}
+
+function setResetPreset(secs, btn) {
+  document.getElementById('cfg-reset-time').value = secs;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+// Keep preset buttons in sync when the number input is typed manually
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('cfg-reset-time').addEventListener('input', function() {
+    if (parseInt(this.value) > 120) this.value = 120;
+    const v = parseInt(this.value);
+    document.querySelectorAll('.preset-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.textContent) === v);
+    });
+  });
+});
+
+// ─── ADVANCED OPTIONS TOGGLE ──────────────────────────────────────────────────
+function toggleAdvanced(forceOpen) {
+  const btn  = document.getElementById('adv-toggle');
+  const body = document.getElementById('adv-body');
+  if (!btn || !body) return;
+  const open = forceOpen !== undefined ? forceOpen : !btn.classList.contains('open');
+  btn.classList.toggle('open', open);
+  body.classList.toggle('open', open);
+  try { localStorage.setItem(LS_PREFIX + 'advOpen', open ? '1' : '0'); } catch(e) {}
+}
+
+// Restore advanced panel state on load
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    if (localStorage.getItem(LS_PREFIX + 'advOpen') === '1') toggleAdvanced(true);
+  } catch(e) {}
+});
+
+// ─── KILL STREAM INFO POPUP ───────────────────────────────────────────────────
+function toggleKsInfo() {
+  const popup = document.getElementById('ks-info-popup');
+  const visible = popup.style.display === 'flex';
+  popup.style.display = visible ? 'none' : 'flex';
+}
+
+// ─── KILL STREAM ─────────────────────────────────────────────────────────────
+// Connects to OBS WebSocket (built into OBS 28+) and stops the stream.
+async function obsHmacAuth(password, salt, challenge) {
+  const enc  = new TextEncoder();
+  const b64  = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const s1   = await crypto.subtle.digest('SHA-256', enc.encode(password + salt));
+  const s2   = await crypto.subtle.digest('SHA-256', enc.encode(b64(s1) + challenge));
+  return b64(s2);
+}
+
+function killStream() {
+  if (!cfg.killStream) return;
+  const wsUrl  = cfg.obsWsUrl  || 'ws://localhost:4455';
+  const wsPass = cfg.obsWsPass || '';
+  try {
+    const ws = new WebSocket(wsUrl);
+    ws.onmessage = async (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.op === 0) {
+        // Hello — auth if required and password provided
+        let authStr;
+        if (msg.d?.authentication && wsPass) {
+          authStr = await obsHmacAuth(wsPass, msg.d.authentication.salt, msg.d.authentication.challenge);
+        }
+        const identify = { op: 1, d: { rpcVersion: 1 } };
+        if (authStr) identify.d.authentication = authStr;
+        ws.send(JSON.stringify(identify));
+      } else if (msg.op === 2) {
+        ws.send(JSON.stringify({ op: 6, d: { requestType: 'StopStream', requestId: 'swear-jar-kill' } }));
+        setTimeout(() => ws.close(), 1500);
+      }
+    };
+    ws.onerror = () => console.warn('Swear Jar: OBS WebSocket not reachable. Enable in OBS → Tools → WebSocket Server Settings.');
+  } catch (e) {
+    console.warn('Swear Jar: could not connect to OBS WebSocket', e);
+  }
+}
+
+// ─── TWITCH IRC ───────────────────────────────────────────────────────────────
+let twitchWs        = null;
+let twitchConnected = false;
+let _twitchChannel  = '';
+
+function connectTwitch(channel) {
+  if (!channel) return;
+  _twitchChannel = channel;
+  disconnectTwitch();
+  const nick = 'justinfan' + (10000 + Math.floor(Math.random() * 89999));
+  try {
+    twitchWs = new WebSocket('wss://irc-ws.chat.twitch.tv');
+  } catch(e) {
+    console.warn('Swear Jar: Twitch IRC not available in this environment', e);
+    return;
+  }
+  twitchWs.onopen = () => {
+    twitchWs.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
+    twitchWs.send('PASS oauth:anonymous');
+    twitchWs.send('NICK ' + nick);
+    twitchWs.send('JOIN #' + channel);
+    twitchConnected = true;
+    console.log('Swear Jar: connected to Twitch IRC #' + channel);
+  };
+  twitchWs.onmessage = (e) => {
+    e.data.split('\r\n').forEach(line => { if (line.trim()) parseTwitchLine(line); });
+  };
+  twitchWs.onclose = () => {
+    twitchConnected = false;
+    // Reconnect if overlay still running and not spilled
+    if (!spilled && _twitchChannel) {
+      setTimeout(() => { if (!spilled && _twitchChannel) connectTwitch(_twitchChannel); }, 8000);
+    }
+  };
+  twitchWs.onerror = () => console.warn('Swear Jar: Twitch IRC connection error');
+}
+
+function disconnectTwitch() {
+  _twitchChannel = '';
+  if (twitchWs) { try { twitchWs.close(); } catch(e){} twitchWs = null; }
+  twitchConnected = false;
+}
+
+// ─── TIKTOK LIVE / EVENT BRIDGE ──────────────────────────────────────────────
+let tikBridgeWs   = null;
+let _tikBridgeUrl = '';
+
+function connectTikTokBridge(url) {
+  if (!url) return;
+  _tikBridgeUrl = url;
+  disconnectTikTokBridge();
+  try {
+    tikBridgeWs = new WebSocket(url);
+  } catch(e) {
+    console.warn('Swear Jar: Event bridge not available', e);
+    return;
+  }
+  tikBridgeWs.onopen = () => {
+    console.log('Swear Jar: Event bridge connected (' + url + ')');
+  };
+  tikBridgeWs.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      if (spilled) return;
+      if (data.type === 'swear') {
+        onSwear('[bridge]');
+      } else if (data.type === 'fill') {
+        swearCount = cfg.limit;
+        fillJarFull(); updateJarText();
+        setTimeout(triggerSpill, 300);
+      } else if (data.type === 'gift' && cfg.tiktokGiftThreshold > 0) {
+        const coins  = parseInt(data.coins) || 0;
+        const swears = Math.min(cfg.limit - swearCount, Math.max(0, Math.floor(coins / cfg.tiktokGiftThreshold)));
+        for (let i = 0; i < swears; i++) {
+          setTimeout(() => { if (!spilled) onSwear('[gift]'); }, i * 350);
+        }
+      } else if (data.type === 'reset') {
+        goSetup();
+      }
+    } catch(err) { /* non-JSON messages ignored */ }
+  };
+  tikBridgeWs.onclose = () => {
+    if (!spilled && _tikBridgeUrl) {
+      setTimeout(() => { if (!spilled && _tikBridgeUrl) connectTikTokBridge(_tikBridgeUrl); }, 10000);
+    }
+  };
+  tikBridgeWs.onerror = () => console.warn('Swear Jar: Event bridge error');
+}
+
+function disconnectTikTokBridge() {
+  _tikBridgeUrl = '';
+  if (tikBridgeWs) { try { tikBridgeWs.close(); } catch(e){} tikBridgeWs = null; }
+}
+
+function parseTwitchLine(raw) {
+  // Keep-alive
+  if (raw.startsWith('PING')) {
+    if (twitchWs) twitchWs.send('PONG :tmi.twitch.tv');
+    return;
+  }
+
+  // Parse IRC tags
+  const tags = {};
+  let rest   = raw;
+  if (raw.startsWith('@')) {
+    const sp = raw.indexOf(' ');
+    raw.substring(1, sp).split(';').forEach(pair => {
+      const eq = pair.indexOf('=');
+      if (eq >= 0) tags[pair.substring(0, eq)] = pair.substring(eq + 1);
+    });
+    rest = raw.substring(sp + 1);
+  }
+
+  const pm = rest.match(/PRIVMSG #\S+ :(.+)$/);
+  if (!pm) return;
+  const msg    = pm[1].trim();
+  const badges = tags['badges'] || '';
+  const isMod  = tags['mod'] === '1' || badges.includes('broadcaster') || badges.includes('moderator');
+
+  // Bits — each bitsThreshold worth of bits adds one swear
+  const bits = parseInt(tags['bits'] || '0');
+  if (bits > 0 && cfg.bitsThreshold > 0 && bits >= cfg.bitsThreshold && !spilled) {
+    const swears = Math.min(cfg.limit - swearCount, Math.floor(bits / cfg.bitsThreshold));
+    for (let i = 0; i < swears; i++) {
+      setTimeout(() => { if (!spilled) onSwear('[bits]'); }, i * 350);
+    }
+    return;
+  }
+
+  // Donation keyword → fill jar to limit then spill
+  if (cfg.donationKeyword && msg.toLowerCase().includes(cfg.donationKeyword.toLowerCase()) && !spilled) {
+    swearCount = cfg.limit;
+    fillJarFull();
+    updateJarText();
+    setTimeout(triggerSpill, 300);
+    return;
+  }
+
+  // Mod-only commands
+  if (!isMod) return;
+  const cmd = msg.toLowerCase().trim();
+  if (cmd === '!swear' || /^!swear\s+\d+$/.test(cmd)) {
+    const n = Math.max(1, Math.min(cfg.limit, parseInt(cmd.split(/\s+/)[1]) || 1));
+    for (let i = 0; i < n; i++) setTimeout(() => { if (!spilled) onSwear('[chat]'); }, i * 280);
+  } else if (cmd === '!reset') {
+    resetOverlay();
+  } else if (cmd === '!fill') {
+    if (!spilled) {
+      const needed = cfg.limit - swearCount;
+      if (needed > 0) {
+        for (let i = 0; i < needed - 1; i++) setTimeout(() => { if (!spilled) onSwear('[chat]'); }, i * 80);
+        setTimeout(() => { if (!spilled) onSwear('[chat]'); }, (needed - 1) * 80 + 100);
+      }
+    }
+  }
+}
+
+// ─── RESET ───────────────────────────────────────────────────────────────────
+function hardResetJar() {
+  const jar = document.getElementById('jar-container');
+  // Cancel the stored tip animation first (most reliable)
+  if (jarTipAnim) { jarTipAnim.cancel(); jarTipAnim = null; }
+  // Cancel any other WAAPI animations still running
+  jar.getAnimations().forEach(a => a.cancel());
+  // Force transform to none to break any lingering fill:'forwards' lock,
+  // then trigger a reflow before clearing so the browser commits the reset
+  jar.style.transform = 'none';
+  void jar.offsetWidth;
+  jar.style.cssText = '';
+  jar.classList.remove('tipping-right','tipping-left','teetering','warn','danger','shaking','shaking-combo');
+  // Reset crack overlay
+  const crack = document.getElementById('jar-crack-overlay');
+  crack.classList.remove('cracked');
+  crack.style.transition = '';
+  crack.style.opacity = '0';
+  crack.querySelectorAll('.crack-line').forEach(l => l.classList.remove('draw'));
+}
+
+function resetOverlay() {
+  spillTimers.forEach(t => clearTimeout(t));
+  spillTimers = [];
+  clearTimeout(autoResetTO);
+  clearInterval(cdInterval);
+  stopRain();
+  stopOverflow();
+  stopSpillAudio(false);  // fade out any playing track
+  spilled = false; teetering = false; swearCount = 0; lastSwearTime = 0;
+  milestonesHit.clear();
+  document.getElementById('milestone-flash').className = '';
+  // Restore jar control interactivity
+  document.getElementById('jar-wrap').style.pointerEvents = '';
+
+  const layer = document.getElementById('spill-layer');
+  layer.style.display = 'none';
+  layer.querySelectorAll('.rain-particle,.coin-particle,.glass-shard,.burst-particle').forEach(e => e.remove());
+
+  document.getElementById('money-scrim').classList.remove('darkened');
+  document.getElementById('crash-flash').classList.remove('pop');
+
+  const go = document.getElementById('game-over');
+  go.style.animation = 'none'; void go.offsetWidth; go.style.opacity = '0';
+  go.style.transform = 'translate(-50%,-50%) scale(0.5)';
+  setTimeout(() => { go.style.animation = ''; }, 50);
+  document.getElementById('countdown-wrap').innerHTML = '';
+
+  hardResetJar();
+  document.getElementById('jar-fill').innerHTML = '';
+  updateJar(); positionJar();
+  if (!isListening) startRecognition();
+}
+
+function goSetup() {
+  testMode = false;
+  document.getElementById('test-back-btn').style.display = 'none';
+  isListening = false;
+  if (recognition) { try { recognition.stop(); } catch(e){} }
+  disconnectTwitch();
+  disconnectTikTokBridge();
+  spillTimers.forEach(t => clearTimeout(t));
+  spillTimers = [];
+  clearTimeout(autoResetTO); clearInterval(cdInterval); stopRain(); stopOverflow();
+  stopSpillAudio(true);  // cut immediately when going back to setup
+  hardResetJar();
+  document.getElementById('jar-fill').innerHTML = '';
+  document.getElementById('spill-layer').style.display = 'none';
+  document.getElementById('money-scrim').classList.remove('darkened');
+  spilled = false; teetering = false; swearCount = 0; lastSwearTime = 0;
+  milestonesHit.clear();
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('setup').style.display   = 'flex';
+  initTagInput(); // re-render chips with current word list
+}
+
+// ─── SPEECH RECOGNITION ──────────────────────────────────────────────────────
+function startRecognition() {
+  const dot = document.getElementById('mic-status');
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    dot.className = 'err'; return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.continuous = true; recognition.interimResults = true; recognition.lang = cfg.language || 'en-US';
+  let last = '';
+  recognition.onend = () => {
+    if (isListening && !spilled) setTimeout(() => { try { recognition.start(); } catch(e){} }, 250);
+  };
+  const errBanner = document.getElementById('mic-error');
+  function showMicError(msg) {
+    isListening = false;
+    dot.className = 'err';
+    if (errBanner) { errBanner.textContent = '🎙 ' + msg; errBanner.style.display = 'block'; }
+    console.error('Swear Jar mic error:', msg);
+  }
+  recognition.onstart = () => {
+    isListening = true;
+    dot.className = 'on';
+    if (errBanner) errBanner.style.display = 'none';
+  };
+  recognition.onerror = (e) => {
+    const msgs = {
+      'not-allowed':       'Mic blocked — allow mic access and reload',
+      'audio-capture':     'No mic found — check your input device',
+      'network':           'Network error — try localhost instead of file://',
+      'service-not-allowed': 'Speech API blocked — run via localhost',
+      'no-speech':         null,   // normal, don't show
+      'aborted':           null,   // normal stop
+    };
+    const msg = msgs[e.error];
+    if (msg === undefined) showMicError('Mic error: ' + e.error);
+    else if (msg) showMicError(msg);
+  };
+  recognition.onresult = (e) => {
+    let t = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript;
+    if (t === last) return;
+    const hit = t.toLowerCase().replace(/[^\p{L}\s]/gu,'').split(/\s+/).find(w => cfg.words.includes(w));
+    if (hit) {
+      const captured = t;
+      last = t;
+      onSwear(hit);
+      // Allow same word to fire again after 800ms (clears interim→final dedup window)
+      setTimeout(() => { if (last === captured) last = ''; }, 800);
+    }
+  };
+  try { recognition.start(); } catch(e){ showMicError('Failed to start mic: ' + e.message); }
+}
+</script>
+</body>
+</html>
