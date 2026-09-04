@@ -481,6 +481,49 @@ function Assembler.build(spec: BuildSpec): Model
 end
 
 --[[
+	The wire shape. A `Types.Mixling` is what a PROFILE stores; a
+	`Types.MixlingView` is what the CLIENT is sent, and it carries the display
+	name and the rate so a Mixling reads identically on a reveal card, a
+	pedestal plaque and a Den list without the client deriving anything.
+
+	This lives here, in the one module both realms already share, because the
+	conversion was previously hand-rolled in three services — and the moment one
+	of them pushed a raw profile row onto a `mixlings` wire key instead, the
+	client cached rows with no `displayName` and every screen reading it threw.
+	One implementation is the fix; there is no second place for it to drift.
+
+	`secretName` is passed in rather than looked up: this module is shared, and
+	resolving it would mean reading the server-only recipe table from a file the
+	client requires (GDD §11.3).
+]]
+function Assembler.toView(mixling: {
+	id: string,
+	critter: string,
+	stuff: string,
+	rarity: number,
+	secretId: string?,
+	bound: boolean?,
+}, secretName: string?)
+	return {
+		id = mixling.id,
+		critter = mixling.critter,
+		stuff = mixling.stuff,
+		rarity = mixling.rarity,
+		secretId = mixling.secretId,
+		secretName = secretName,
+		bound = mixling.bound,
+		displayName = Assembler.displayName({
+			critter = mixling.critter,
+			stuff = mixling.stuff,
+			rarity = mixling.rarity,
+			secretId = mixling.secretId,
+			secretName = secretName,
+		}),
+		goopPerSec = Rarity.goopPerSec(mixling.rarity),
+	}
+end
+
+--[[
 	A display copy for pedestals and result cards: anchored, non-colliding,
 	slowly spinning is left to the caller.
 ]]

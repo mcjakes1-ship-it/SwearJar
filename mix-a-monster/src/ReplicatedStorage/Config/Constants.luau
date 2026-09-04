@@ -222,6 +222,15 @@ Constants.WORLD = {
 	DEN_SIZE = Vector3.new(48, 24, 48),
 	PEDESTAL_RING_RADIUS = 13,
 	PEDESTAL_COUNT = 15, -- hard max; slots beyond denSlots are shown locked
+	--[[
+		GDD §11.4: "Particles capped per Den." Only this many displays in a Den
+		carry the glow and the particle emitter — the highest-rarity ones, since
+		those are what the owner wants seen. Everything past the cap keeps the
+		material and colour treatment, which is most of the read at a distance
+		and costs nothing. Ten Dens of fifteen Mythics is 150 emitters and 150
+		lights otherwise, on a phone.
+	]]
+	FX_BUDGET_PER_DEN = 4,
 	BASE_HEIGHT = 0,
 	SHOP_OFFSET = 92,
 	SKY_COLOR = Color3.fromRGB(126, 200, 255),

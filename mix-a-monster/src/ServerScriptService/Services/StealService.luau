@@ -550,6 +550,16 @@ local function canStart(thief: Player, owner: Player, index: number): (boolean, 
 	if not den.canEnter(thief, owner.UserId) then
 		return false, "That Den is locked."
 	end
+	--[[
+		canEnter answers about the DOOR. A friend standing in an unlocked Den
+		passes it and would otherwise be able to take a pedestal, so the
+		owner's friendly-fire setting is checked here too (GDD §18). Without
+		this the toggle would be half-wired: it would keep friends out of a
+		locked Den and let them rob an unlocked one.
+	]]
+	if den.friendlyFire and not den.friendlyFire(owner) and den.areFriends and den.areFriends(thief, owner) then
+		return false, owner.DisplayName .. " has friendly fire turned off."
+	end
 
 	local until_ = repeatVictim[victimKey(thief, owner.UserId)]
 	if until_ and os.clock() < until_ then
@@ -762,6 +772,24 @@ local function beginCarry(thief: Player, owner: Player, mixling: Mixling, view: 
 	carrying[thief] = carry
 	applyCarryPenalty(carry)
 	removeBat(thief) -- a carrier cannot bonk (GDD §8.4.2)
+
+	--[[
+		GDD §7.5 names four moments a Mixling speaks: roll reveal, placement,
+		steal pickup, and idle on a pedestal. This is the third one, and it is
+		the loudest of them narratively — the thing shouts as it is torn off its
+		pedestal and everyone nearby hears which Den it came from. The model
+		carries its own sound folder from the Assembler, so playing it here
+		needs nothing but the play.
+	]]
+	for _, child in root:GetChildren() do
+		if child.Name == "MixSound" then
+			for _, sound in child:GetChildren() do
+				if sound:IsA("Sound") and sound.SoundId ~= "" then
+					sound:Play()
+				end
+			end
+		end
+	end
 	carry.tag = showThiefTag(owner, thief)
 	watchOwnPedestals(thief, carry)
 

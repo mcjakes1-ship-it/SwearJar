@@ -596,6 +596,21 @@ local function grant(player: Player, key: string, def: ProductDef)
 end
 
 --[[
+	The inverse of `grant`, for the one case where a grant succeeded but could
+	not be made durable. Only the Goop packs are reversible — a Lock Refresh and
+	a Luck Party are already visible to the whole server by the time we know the
+	write failed, so those are let stand and the receipt is re-acked on retry
+	(the claim is gone with them, so the retry re-grants rather than double
+	granting). Being generous with 49 R$ of lock cooldown beats a stuck receipt.
+]]
+local function revoke(player: Player, key: string, def: ProductDef): boolean
+	if def.goop then
+		return economy.trySpend(player, def.goop, "rollback:" .. key)
+	end
+	return false
+end
+
+--[[
 	Roblox re-delivers a receipt until this returns PurchaseGranted, and it
 	delivers to whichever server the player is on. Every early return here is
 	NotProcessedYet on purpose: the purchase stays alive and comes back.
@@ -653,6 +668,29 @@ local function processReceipt(info: { [string]: any })
 		-- let Roblox retry the whole thing.
 		profile.receipts[receiptKey] = nil
 		warn(("[Monetization] granting %s to %s failed: %s"):format(key, player.Name, tostring(err)))
+		return RETRY
+	end
+
+	--[[
+		Do not ack until the grant is DURABLE. Roblox treats PurchaseGranted as
+		final and never redelivers, but at this point the claim and the grant
+		exist only in a table in this server's memory — up to
+		Constants.AUTOSAVE_SECONDS from disk. A crash in that window would take
+		something the player paid real money for and leave no trace that they
+		paid for it.
+
+		If the write fails, roll the claim and the grant back exactly as the
+		failure branch above does and return NotProcessedYet: Roblox retries,
+		and a retry that grants twice is impossible because the claim is gone
+		along with the grant.
+	]]
+	if data and data.saveNow and not data.saveNow(player) then
+		profile.receipts[receiptKey] = nil
+		local undone = pcall(function()
+			revoke(player, key, def)
+		end)
+		warn(("[Monetization] could not persist %s for %s; not acking the receipt (rollback %s)")
+			:format(key, player.Name, if undone then "ok" else "FAILED"))
 		return RETRY
 	end
 

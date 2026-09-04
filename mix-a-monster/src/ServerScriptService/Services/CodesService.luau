@@ -218,7 +218,13 @@ local function push(player: Player, profile: Profile)
 	if not data then
 		return
 	end
-	data.push(player, { goop = profile.goop, totalGoopEarned = profile.totalGoopEarned })
+	-- `codes` rides along so the panel can grey out what is already spent
+	-- without waiting for the next full sync. It is a handful of booleans.
+	data.push(player, {
+		goop = profile.goop,
+		totalGoopEarned = profile.totalGoopEarned,
+		codes = profile.codes,
+	})
 end
 
 -- ── Redemption ───────────────────────────────────────────────────────────

@@ -267,3 +267,157 @@ belongs to the owner. Nothing below has been altered in `Constants.luau`.
    progression instead of decaying against it.
 
 Re-run `python3 tools/balance.py` after any change to `Constants.luau`.
+
+---
+
+## D17 — One implementation of the wire shape, in `MixlingAssembler.toView`
+
+**Found by:** the adversarial review, at critical severity, confirmed independently
+by two dimensions.
+**The bug:** a profile stores `Types.Mixling` rows; the client caches
+`Types.MixlingView` rows, which additionally carry `displayName` and
+`goopPerSec`. `DenService.pushPlacement` pushed `profile.mixlings` — the raw
+rows — onto the `mixlings` wire key. `mixlings` is not a merge key, so
+`ClientState` replaced its whole cache with rows that have no display name, and
+the next Den panel render threw on `cell.title.Text = mixling.displayName`. It
+happened on every steal, bank and drop-return, it broke the panel for both the
+thief and the victim, and nothing repaired it: there is exactly one full sync per
+session.
+**Root cause, not the symptom:** three services were each hand-rolling the
+conversion. One of them getting it wrong was a matter of time.
+**Chosen:** `Assembler.toView(mixling, secretName?)` in the one module both
+realms already share, used by `PlayerService`, `MixerService` and `DenService`.
+`secretName` is a parameter rather than a lookup because resolving it would mean
+reading the server-only recipe table from a file the client requires.
+**Why it survived every other gate:** the type checker cannot see it — services
+reach each other through an `any`-typed registry, and `DataService.push` takes
+`{ [string]: any }`. The contract linter checks names, not shapes. This is the
+class of defect the review existed to find.
+
+---
+
+## D18 — `Signal:fireSync` exists because "last chance" has to mean it
+
+**Found by:** the review, at high severity, three findings that turned out to
+share one cause.
+**The bug:** `DataService.onReleasing` is documented as a service's last
+synchronous chance to write state before a profile is saved — that is how a
+carried Mixling gets home when its owner rage-quits (GDD §8.4.6). But
+`Util.signal():fire` uses `task.spawn`, so a handler that yields hands control
+straight back to the caller. `StealService`'s handler yields on its first
+`returnToOwner`, so every later carried or dropped Mixling of a departing owner
+was written out of existence.
+**Chosen:** `Signal:fireSync` runs each handler to completion, in place,
+isolating errors with `pcall`. `DataService.release` uses it. `fire` is still the
+right thing for a notification; a last-chance hook is not a notification.
+**Also fixed here:** `DataService.saveAll(true)` — the BindToClose path — did not
+fire `onReleasing` at all, so a server shutdown destroyed every Mixling that was
+mid-carry. It now gives services the same pass a single player's departure does.
+
+---
+
+## D19 — A session lock is owned the moment it is taken
+
+**Found by:** the review, at high severity.
+**The bug:** `acquire` stamps the lock as a side effect of the read, so the
+instant it returns ok this server owns the profile. `load` then had two early
+returns — including "the player left while we were reading" — that walked away
+without giving it back. The player was refused their own profile on their next
+join for up to `SESSION_LOCK_SECONDS`, with a message telling them their data was
+still saving.
+**Chosen:** a `releaseLock(userId)` that clears the lock without writing data,
+called on every path that declines a lock it already holds.
+**The general rule:** any function that acquires as a side effect of reading owes
+a release on every exit, and "we bailed early" is an exit.
+
+---
+
+## D20 — A receipt is not acked until the grant is durable
+
+**Found by:** the review, at high severity.
+**The bug:** `ProcessReceipt` recorded the purchase id, granted, and returned
+`PurchaseGranted` — while both the claim and the grant existed only in this
+server's memory, up to `AUTOSAVE_SECONDS` from disk. Roblox treats
+`PurchaseGranted` as final and never redelivers. A crash in that window destroyed
+something a player paid real money for and left no record that they had.
+**Chosen:** `DataService.saveNow(player)` writes one profile immediately and
+reports whether it landed. `ProcessReceipt` returns `PurchaseGranted` only after
+it does; on a failed write it rolls back the claim and the grant and returns
+`NotProcessedYet`, so Roblox retries. A retry cannot double-grant because the
+claim is gone along with the grant.
+**The asymmetry:** only the Goop packs are reversible. A Lock Refresh and a Luck
+Party are already visible to the whole server by the time the write fails, so
+those are let stand — being generous with 49 R$ of lock cooldown beats a stuck
+receipt.
+
+---
+
+## D21 — Friendly fire is wired, and that closes GDD §18's open question
+
+**GDD:** §18 — *"Open: should friends be able to steal from each other? (Default:
+yes, with a 'friendly fire' toggle in settings — decide in week 2.)"*
+**The review found** the toggle was fully built: validated, persisted, replicated
+and rendered in the settings panel — and read by nobody. Turning it off changed
+nothing.
+**Chosen:** the GDD's own stated default. Friends can raid each other, and the
+toggle works: `DenService.canEnter` stops admitting friends through a locked door
+when the owner has it off, and `StealService.canStart` refuses a friend's pickup
+in an unlocked Den on the same flag. Both are needed — `canEnter` answers about
+the door, and without the second check the toggle would keep friends out of a
+locked Den and let them rob an unlocked one.
+**Why not just remove the row:** a persisted, replicated setting that does
+nothing is worse than no setting, and the behaviour it names is one the GDD
+already decided the default for.
+
+---
+
+## D22 — Particles are capped per Den, as GDD §11.4 asks
+
+**Found by:** the review, at medium severity, three times over.
+**The bug:** `applyRarityFx` gives every Rare+ Mixling a `PointLight` and every
+Epic+ a `ParticleEmitter`, unconditionally, server-side. Ten Dens of fifteen
+Mythics is 150 lights and 150 emitters, on a phone, and the player's own "Low
+effects" setting could not touch them because they are not the client's to remove.
+**Chosen:** `Constants.WORLD.FX_BUDGET_PER_DEN`. `DenService` spends the budget
+on the highest-rarity displays in the Den — the ones the owner is flexing and a
+visitor is deciding whether to steal — and everything past it keeps the material
+and tint, which is most of the read at distance and costs nothing. Ranked by
+(rarity, id) so the answer is stable: an unstable comparator would have a Den's
+emitters shuffling every time anything was placed.
+
+---
+
+## D23 — Smaller review findings, applied
+
+- **`MixerService.rollFor` yielded between debiting the ingredients and minting
+  the Mixling.** Resolving luck reaches `getLuck` → `hasPass` →
+  `UserOwnsGamePassAsync`, which yields on a cold cache. A disconnect in that
+  window charged two ingredients and produced nothing. Luck is now resolved
+  before the debit, and the preconditions are rechecked after the yield.
+- **`DataService.trim` scrapped Mixlings out of a live profile on every
+  autosave** with no push to say they were gone, so the client kept listing and
+  offering things the server had destroyed. It now trims only on the way out.
+- **`codes` was declared on `ProfileView` and rendered by the HUD, and never sent
+  by anything** — the "already used" line was permanently blank.
+- **Steal pickup played no sound**, though the carried model is built with its
+  sound folder attached. GDD §7.5 lists four moments a Mixling speaks and that
+  was the missing one — and narratively the loudest.
+- **`UiKit.applyCommon` assigned every unrecognised prop onto the Instance**, so
+  the kit's own documented `MaxTextSize` threw at runtime; six controllers each
+  carried a private workaround. Fixed at source with a named `RESERVED` set.
+  `Gradient` was reserved and never implemented; `pop()` scaled only the Scale
+  halves of the UDim2, making it a no-op on anything sized in offsets.
+- **`ClientState.secrets` was not a merge key**, so finding a second secret in a
+  session wiped the first one's name and pair from the cache; and
+  **`inventoryOf(kind)` ignored its `kind`**, which would have offered Stuff in
+  the Critter slot.
+- **Pedestals carried no `CollectionService` tag** although GDD §11.4 asks for
+  one outright, so three controllers were walking Workspace and keying on
+  `DenService`'s naming convention. Pedestals are now tagged and Den folders
+  carry an `OwnerUserId` attribute.
+- **Idle chirps were scheduled by both `DenService` and `SoundController`** on
+  independent clocks — up to twice the intended rate, which is precisely the
+  cacophony GDD §18 warns about. The client scheduler is gone; the sfx toggle
+  now works through a `SoundGroup` the assembler routes every Mixling sound into.
+
+Nine further findings were refuted on inspection rather than applied.

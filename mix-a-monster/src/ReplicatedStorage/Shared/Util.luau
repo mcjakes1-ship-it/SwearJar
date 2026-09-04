@@ -21,6 +21,7 @@ export type Signal = {
 	connect: (Signal, (...any) -> ()) -> Connection,
 	once: (Signal, (...any) -> ()) -> Connection,
 	fire: (Signal, ...any) -> (),
+	fireSync: (Signal, ...any) -> (),
 	destroy: (Signal) -> (),
 	_handlers: { [number]: ((...any) -> ())? },
 	_nextId: number,
@@ -55,6 +56,29 @@ function Signal:fire(...: any)
 	local self_ = self :: any
 	for _, handler in self_._handlers do
 		task.spawn(handler, ...)
+	end
+end
+
+--[[
+	Runs every handler to completion, in place, before returning — including
+	their yields. `fire` uses task.spawn, so a handler that yields hands control
+	straight back to the caller; that is right for a notification and WRONG for
+	a last-chance hook, where the caller is about to do something irreversible
+	(write a profile to a DataStore, shut a server down) and needs the handlers
+	to have actually finished.
+
+	A handler that errors is isolated: the rest still run.
+]]
+function Signal:fireSync(...: any)
+	local self_ = self :: any
+	local args = table.pack(...)
+	for _, handler in self_._handlers do
+		local ok, err = pcall(function()
+			handler(table.unpack(args, 1, args.n))
+		end)
+		if not ok then
+			warn("[Signal] fireSync handler error: " .. tostring(err))
+		end
 	end
 end
 

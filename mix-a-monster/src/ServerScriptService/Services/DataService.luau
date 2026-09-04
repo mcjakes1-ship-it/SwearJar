@@ -51,6 +51,8 @@ local profiles: { [Player]: Profile } = {}
 local loading: { [Player]: boolean } = {}
 local memoryStore: { [string]: any } = {}
 local analytics: any = nil
+-- Bumped by every failed write, so saveNow can report whether its own landed.
+local saveFailures = 0
 
 -- ── Template ─────────────────────────────────────────────────────────────
 -- Every field a Profile can have. `Util.reconcile` fills missing keys from
@@ -188,11 +190,40 @@ local function write(userId: number, profile: Profile, release: boolean)
 	end)
 
 	if not ok then
+		saveFailures += 1
 		warn(("[DataService] save failed for %d: %s"):format(userId, tostring(err)))
 		if analytics then
 			analytics.event("SaveFailed", { userId = userId, err = tostring(err) })
 		end
 	end
+end
+
+--[[
+	Hands a lock back without writing data. `acquire` stamps the lock as a side
+	effect of the read, so the moment it returns ok this server owns the profile
+	— and every path that then declines to use it has to give it back, or the
+	player is locked out of their own profile for SESSION_LOCK_SECONDS on their
+	next join.
+]]
+local function releaseLock(userId: number)
+	local dataStore = getStore()
+	if not dataStore then
+		return
+	end
+	Util.retry(3, 1, function()
+		dataStore:UpdateAsync(keyFor(userId), function(stored: any)
+			if type(stored) ~= "table" then
+				return nil
+			end
+			local lock = stored.lock
+			if type(lock) == "table" and lock.jobId ~= JOB_ID then
+				return nil -- not ours to clear
+			end
+			stored.lock = nil
+			return stored
+		end)
+		return true
+	end)
 end
 
 -- ── Size guard ───────────────────────────────────────────────────────────
@@ -256,6 +287,12 @@ local function load(player: Player)
 	loading[player] = nil
 
 	if not player.Parent then
+		-- They left while we were reading. The lock is already ours, so hand it
+		-- straight back: otherwise their own next join is refused by a lock
+		-- nobody is using.
+		if ok then
+			task.spawn(releaseLock, player.UserId)
+		end
 		return
 	end
 
@@ -286,10 +323,12 @@ local function release(player: Player)
 		loading[player] = nil
 		return
 	end
-	-- Services get one synchronous chance to write final state (a carried
-	-- Mixling returning home, GDD §8.4.6) before the profile leaves memory.
-	DataService.onReleasing:fire(player, profile)
-	task.wait()
+	-- Services get one genuinely synchronous chance to write final state (a
+	-- carried Mixling returning home, GDD §8.4.6) before the profile leaves
+	-- memory. fireSync, not fire: `fire` spawns each handler, so a handler that
+	-- yields — and returning a carried Mixling does yield — would still be
+	-- running when the write below took its snapshot.
+	DataService.onReleasing:fireSync(player, profile)
 
 	profiles[player] = nil
 	trim(profile)
@@ -338,11 +377,34 @@ end
 
 -- Saves everyone right now. Used by BindToClose and by the autosave loop.
 function DataService.saveAll(releaseLocks: boolean)
+	--[[
+		A shutdown save is the same irreversible moment as a player leaving, so
+		it gets the same hook. Without this, BindToClose snapshots profiles
+		while a stolen Mixling is mid-carry — and a carried Mixling belongs to
+		no profile (StealService is the only thing holding it), so it is written
+		out of existence. GDD §8.4.6 says it goes home to its owner; this is
+		where that happens for everyone at once.
+	]]
+	if releaseLocks then
+		for player, profile in profiles do
+			DataService.onReleasing:fireSync(player, profile)
+		end
+	end
+
 	local pending = 0
 	for player, profile in profiles do
 		pending += 1
 		task.spawn(function()
-			trim(profile)
+			--[[
+				Only trim on the way out. Trimming a profile that is still
+				loaded deletes Mixlings the client is currently listing, with
+				no push to say they are gone — the player keeps seeing them,
+				and placing one silently fails. On a shutdown save the client
+				is about to stop existing, so there is nothing to desync.
+			]]
+			if releaseLocks then
+				trim(profile)
+			end
 			write(player.UserId, profile, releaseLocks)
 			pending -= 1
 		end)
@@ -351,6 +413,30 @@ function DataService.saveAll(releaseLocks: boolean)
 	while pending > 0 and os.clock() < deadline do
 		task.wait(0.1)
 	end
+end
+
+--[[
+	Writes ONE profile right now and reports whether it landed.
+
+	This exists for ProcessReceipt. Everything else in the game can afford to
+	wait for the autosave, because losing a minute of Goop accrual is a minute
+	of Goop. A purchase is different: Roblox treats PurchaseGranted as final and
+	never redelivers, so acking a receipt whose grant is still only in memory
+	means a crash inside the autosave window destroys something the player paid
+	real money for. The caller must not return GRANTED until this returns true.
+]]
+function DataService.saveNow(player: Player): boolean
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	if memoryOnly then
+		memoryStore[keyFor(player.UserId)] = Util.deepCopy(profile)
+		return true
+	end
+	local before = saveFailures
+	write(player.UserId, profile, false)
+	return saveFailures == before
 end
 
 function DataService.isMemoryOnly(): boolean

@@ -375,10 +375,40 @@ function DenService.canEnter(visitor: Player, ownerUserId: number): boolean
 			if not lockActive(den) then
 				return true
 			end
+			--[[
+				GDD §8.3 lets an owner's friends through a locked door, and GDD
+				§18's open question is whether friends should be able to steal
+				from each other at all. The answer this ships with is the GDD's
+				own stated default: yes, with a toggle — so a friend walks
+				through a locked door only while the OWNER still has friendly
+				fire on. Turning it off makes a locked Den locked to everyone,
+				which is what "Let friends steal from me: off" has to mean if
+				the setting is to mean anything.
+			]]
+			if not DenService.friendlyFire(player) then
+				return false
+			end
 			return areFriends(visitor, player)
 		end
 	end
 	return true
+end
+
+-- The cached answer, for callers outside this file. Non-yielding by design:
+-- it returns false until primeFriendship has resolved, the same way the door
+-- rule treats an unknown pair.
+function DenService.areFriends(visitor: Player, owner: Player): boolean
+	return areFriends(visitor, owner)
+end
+
+-- Whether `owner` currently allows friends to raid them (GDD §18). Defaults to
+-- true for a profile that has not loaded, matching the profile template.
+function DenService.friendlyFire(owner: Player): boolean
+	local profile = profileOf(owner)
+	if not profile then
+		return true
+	end
+	return profile.settings.friendlyFire ~= false
 end
 
 -- ── Collision groups ─────────────────────────────────────────────────────
@@ -585,7 +615,7 @@ end
 
 -- ── Display models ───────────────────────────────────────────────────────
 
-local function buildSpec(mixling: Mixling): Assembler.BuildSpec
+local function buildSpec(mixling: Mixling, lowFx: boolean?): Assembler.BuildSpec
 	local secret = if mixling.secretId then SecretRecipes.byId(mixling.secretId) else nil
 	return {
 		critter = mixling.critter,
@@ -594,7 +624,40 @@ local function buildSpec(mixling: Mixling): Assembler.BuildSpec
 		secretId = mixling.secretId,
 		secretName = if secret then secret.name else nil,
 		withSound = true,
+		lowFx = lowFx,
 	}
+end
+
+--[[
+	Whether this Mixling is inside the Den's FX budget (GDD §11.4, "Particles
+	capped per Den"). The budget is spent on the highest-rarity displays,
+	because those are the ones the owner is flexing and the ones a visitor is
+	deciding whether to steal. Everything past it still gets the material and
+	tint from applyRarityFx — only the PointLight and the ParticleEmitter are
+	dropped.
+
+	Ranked by (rarity, id) so the answer is stable: an unstable comparator would
+	have a Den's Mixlings swapping their emitters around every time one was
+	placed or taken.
+]]
+local function withinFxBudget(profile: Profile, mixling: Mixling): boolean
+	local better = 0
+	for slot, id in profile.placed do
+		if id ~= mixling.id then
+			local other = Util.find(profile.mixlings, function(entry: Mixling): boolean
+				return entry.id == id
+			end)
+			if other then
+				if other.rarity > mixling.rarity or (other.rarity == mixling.rarity and other.id < mixling.id) then
+					better += 1
+				end
+			end
+		end
+		if better >= Constants.WORLD.FX_BUDGET_PER_DEN then
+			return false
+		end
+	end
+	return better < Constants.WORLD.FX_BUDGET_PER_DEN
 end
 
 local function displayNameOf(mixling: Mixling): string
@@ -664,7 +727,9 @@ local function buildDisplay(den: Den, index: number, mixling: Mixling)
 	end
 
 	local pivot = CFrame.new(pedestal.Position + Vector3.new(0, PEDESTAL_SIZE.Y * 0.5 + DISPLAY_HEIGHT, 0))
-	local model = Assembler.buildDisplay(buildSpec(mixling), pivot)
+	local profile = profileOf(den.player)
+	local lowFx = profile == nil or not withinFxBudget(profile, mixling)
+	local model = Assembler.buildDisplay(buildSpec(mixling, lowFx), pivot)
 
 	local id = Instance.new("StringValue")
 	id.Name = "MixlingId"
@@ -1043,15 +1108,31 @@ local function slotHolding(profile: Profile, mixlingId: string): string?
 	return nil
 end
 
+--[[
+	`profile.mixlings` holds Types.Mixling rows; the `mixlings` wire key holds
+	Types.MixlingView. Pushing the profile list directly replaced the client's
+	cache with rows that have no displayName and no goopPerSec, and every screen
+	that read one threw from then until the player rejoined — there is only one
+	full sync per session to repair it. Converting here is not optional.
+]]
+local function viewOf(mixling: Mixling)
+	local secret = if mixling.secretId then SecretRecipes.byId(mixling.secretId) else nil
+	return Assembler.toView(mixling, if secret then secret.name else nil)
+end
+
 local function pushPlacement(player: Player, profile: Profile, withMixlings: boolean?)
 	if not data then
 		return
 	end
-	if withMixlings then
-		data.push(player, { placed = profile.placed, mixlings = profile.mixlings })
-	else
+	if not withMixlings then
 		data.push(player, { placed = profile.placed })
+		return
 	end
+	local views = table.create(#profile.mixlings)
+	for _, mixling in profile.mixlings do
+		table.insert(views, viewOf(mixling))
+	end
+	data.push(player, { placed = profile.placed, mixlings = views })
 end
 
 local function afterPlacementChange(player: Player, profile: Profile, withMixlings: boolean?)

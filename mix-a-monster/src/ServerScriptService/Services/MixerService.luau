@@ -243,7 +243,28 @@ function MixerService.rollFor(player: Player, critterName: string, stuffName: st
 		return nil, ("You have no %s left."):format(stuffName)
 	end
 
-	-- Committed. Charge for it before anything else can go wrong.
+	--[[
+		Resolve luck FIRST, while the mix can still be refused.
+
+		luckFor reaches MonetizationService.getLuck, which calls hasPass, which
+		yields on a cold cache (UserOwnsGamePassAsync is a web call). Doing that
+		AFTER the debit opened a window where a disconnect left the player
+		charged two ingredients with no Mixling to show for it — and this file's
+		own header claims the debit and the mint cannot be separated.
+	]]
+	local luck = luckFor(player, critterDef, stuffDef)
+
+	-- The yield above means everything checked before it has to be rechecked:
+	-- the profile can have been released, and the counts can have been spent by
+	-- a second request that arrived while we were waiting.
+	if profileOf(player) ~= profile then
+		return nil, nil
+	end
+	if (profile.inventory[critterName] or 0) < 1 or (profile.inventory[stuffName] or 0) < 1 then
+		return nil, "Those ingredients are already gone."
+	end
+
+	-- Committed. Nothing below this line yields before the Mixling exists.
 	lastRollAt[player] = now
 	consume(profile, critterName)
 	consume(profile, stuffName)
@@ -253,7 +274,6 @@ function MixerService.rollFor(player: Player, critterName: string, stuffName: st
 	local rigged = firstRoll and starterPair
 
 	local secret = SecretRecipes.match(critterName, stuffName)
-	local luck = luckFor(player, critterDef, stuffDef)
 
 	local tier: number
 	if secret then
