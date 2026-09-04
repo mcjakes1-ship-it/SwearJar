@@ -57,7 +57,12 @@ def names_in(block_name):
     if not match:
         problems.append(f"Net.luau: could not parse Net.{block_name}")
         return set()
-    return set(re.findall(r'"([A-Za-z]+)"', match.group(1)))
+    # Strip comments first: the blocks carry doc comments that quote other
+    # vocabularies (Notify's `kind` values, for one), and reading those as
+    # remote names both invents remotes that do not exist and, worse, would
+    # let a genuinely undefined remote pass if its name happened to appear in
+    # a comment.
+    return set(re.findall(r'^\s*"([A-Za-z]+)"', strip_comments(match.group(1)), re.M))
 
 
 REMOTES = names_in("CLIENT_TO_SERVER") | names_in("SERVER_TO_CLIENT") | names_in("FUNCTIONS")
