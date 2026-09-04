@@ -210,3 +210,60 @@ opened. This is the cheapest quality gate available in a repo with no runtime.
 
 *Append to this file on every material decision. Update the GDD's version header
 when a decision changes design intent rather than implementation.*
+
+---
+
+## D15 — Starter ingredients are a grant, never shop stock
+
+**GDD:** §7.2 prices Frog and Sock at 0 and calls them "(starter, free)", and in
+the same section says "Starter pair is granted once per new profile".
+**Chosen:** `Ingredients.isPurchasable` returns false for anything flagged
+`starter`. `ShopService` refuses to sell them and the shop UI never lists them.
+**Why:** a shop that stocks a 0-Goop ingredient is an infinite free roll. A player
+would never need to earn anything: buy Frog, buy Sock, mix, repeat, forever, at
+luck 0. The Goop economy — the primary sink, the reason to place Mixlings, the
+reason to defend a Den — would simply stop existing. `tools/balance.py` prints
+the list of 0-priced ingredients and says this out loud, so a future Weekly Drop
+cannot reintroduce the hole by accident.
+
+---
+
+## D16 — A balance model, checked in and run against the real constants
+
+**GDD:** §18 — "Balance: Goop curve is a guess. Instrument first, tune weekly."
+**Chosen:** `tools/balance.py` reads `Constants.luau` and `Ingredients.luau`
+directly (never a copy) and reports the odds table, the Epic+ cadence, a Monte
+Carlo of the Goop curve against §8.2's targets, sinks versus faucets, and the
+progression ceiling.
+**Why:** every one of those is a number the GDD states as a target and does not
+check. Running it on the launch constants found four things worth a decision
+before a playtest, listed below. The tool is the deliverable; the numbers move.
+
+### What it currently says about the launch constants
+
+These are findings, not changes — every one is a **[TUNE]** value and the call
+belongs to the owner. Nothing below has been altered in `Constants.luau`.
+
+1. **The Goop curve runs hot.** §8.2 targets ~10/sec at 15 min and ~100/sec by
+   day 3. The model reaches ~38/sec and ~1,580/sec — about 4x and 16x. The
+   day-3 player is already past the *week-2* target. Lower ingredient prices are
+   not the cause; the cause is that a placed Mixling pays forever and rolls are
+   cheap relative to income.
+2. **Epic+ fires more often than intended.** §15 wants one every ~4 min per
+   server. At the GDD's own stated cadence (a mix every 45–90 s, §4) the model
+   gives one every 1.3–2.9 min. Epic is 3.5% at luck 0; halving its weight would
+   land it on target. Worth deciding whether "more often than planned" is
+   actually bad — the announcement *is* the hype machine.
+3. **The progression ceiling is ~600x and is reached in days.** Floor is 5 slots
+   × 1 Goop/sec; the realistic ceiling is 15 slots × 200. The day-3 simulation
+   is already at 53% of it. Once every pedestal holds a top-tier Mixling there is
+   nothing left to increase, and neither the Mixdex nor the leaderboards pay out.
+   This is the structural retention question, and it is bigger than any single
+   constant: v1.5's pity timer and v2's trading do not widen this span.
+4. **The daily reward stops mattering on day 3.** The full 7-day track is 5,600
+   Goop — 93 minutes of income at 10/sec, but 56 seconds at 100/sec. A daily
+   reward worth under a minute of play is not a reason to open the app. Paying
+   the daily in *ingredients* rather than Goop would keep its value indexed to
+   progression instead of decaying against it.
+
+Re-run `python3 tools/balance.py` after any change to `Constants.luau`.

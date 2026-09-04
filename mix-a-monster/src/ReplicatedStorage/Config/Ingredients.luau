@@ -128,6 +128,45 @@ function Ingredients.isStuff(name: string): boolean
 	return item ~= nil and item.kind == "Stuff"
 end
 
+--[[
+	The starter pair is a one-time GRANT (GDD §7.2: "Starter pair is granted
+	once per new profile"), never shop stock. Their listed price is 0, so a
+	shop that sold them would be an infinite free roll and the Goop economy
+	would stop existing — tools/balance.py flags this explicitly. ShopService
+	refuses them and the shop UI never lists them.
+]]
+function Ingredients.isPurchasable(name: string): boolean
+	local item = byName[name]
+	return item ~= nil and item.starter ~= true
+end
+
+-- What a shop shelf shows, ordered the way GDD §8.6 asks: by tier, cheapest
+-- first within a tier.
+function Ingredients.catalogue(kind: string): { Ingredient }
+	local source: { Ingredient } = if kind == "Critter" then Ingredients.Critters else Ingredients.Stuff
+	local out = {}
+	for _, item in source do
+		if Ingredients.isPurchasable(item.name) then
+			table.insert(out, item)
+		end
+	end
+	table.sort(out, function(a, b)
+		if a.tier ~= b.tier then
+			return a.tier < b.tier
+		end
+		return a.price < b.price
+	end)
+	return out
+end
+
+-- The newest ingredient of a kind — the Weekly Drop slot pinned to the front
+-- of each shop (GDD §8.6, §12). Appending a row to the table above is the
+-- whole of "feature this week's drop".
+function Ingredients.newest(kind: string): Ingredient?
+	local source: { Ingredient } = if kind == "Critter" then Ingredients.Critters else Ingredients.Stuff
+	return source[#source]
+end
+
 -- Total number of non-secret Mixdex entries (GDD §8.5).
 function Ingredients.baseCombinationCount(): number
 	return #Ingredients.Critters * #Ingredients.Stuff
