@@ -23,6 +23,8 @@
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
 
 local Config = ReplicatedStorage:WaitForChild("Config")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -287,6 +289,37 @@ local function applyRarityFx(model: Model, tier: number, lowFx: boolean)
 	end
 end
 
+--[[
+	Every Mixling sound is routed through one SoundGroup so a client can silence
+	them all at once.
+
+	This matters because the idle chirps on pedestals are played by the SERVER
+	(GDD §18 requires that throttle to be server-side), and a server-played
+	Sound is not the client's to stop. Muting a SoundGroup, on the other hand,
+	is a purely local property change: it silences the chirps for the player who
+	turned sfx off and for nobody else.
+
+	The server creates the group; the client only ever finds it.
+]]
+Assembler.SOUND_GROUP = "MixlingSFX"
+
+local function soundGroup(): SoundGroup?
+	local existing = SoundService:FindFirstChild(Assembler.SOUND_GROUP)
+	if existing and existing:IsA("SoundGroup") then
+		return existing
+	end
+	if not RunService:IsServer() then
+		return nil -- the client waits for replication rather than making a second one
+	end
+	local group = Instance.new("SoundGroup")
+	group.Name = Assembler.SOUND_GROUP
+	group.Volume = 1
+	group.Parent = SoundService
+	return group
+end
+
+Assembler.soundGroup = soundGroup
+
 -- ── Sound (GDD §7.5) ─────────────────────────────────────────────────────
 -- voice + layer played together, rarity applying PlaybackSpeed and a reverb
 -- preset. Sounds live under the model so any consumer can play them.
@@ -309,6 +342,7 @@ function Assembler.buildSound(parent: BasePart, critter: string, stuff: string, 
 		sound.RollOffMaxDistance = 60
 		sound.RollOffMode = Enum.RollOffMode.InverseTapered
 		sound.Volume = if template then sound.Volume else 0.5
+		sound.SoundGroup = soundGroup()
 		sound.Parent = folder
 		return sound
 	end

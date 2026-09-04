@@ -83,7 +83,15 @@ export type ProfileView = {
 	-- a pedestal plaque and this list, and the client never has to derive a name.
 	mixlings: { MixlingView },
 	placed: { [string]: string },
-	denSlots: number,
+	denSlots: number, -- what Goop has bought, matching the profile field
+	--[[
+		What DenService.totalSlots() actually returns: denSlots plus the game
+		pass bonus, clamped to DEN_SLOTS_HARD_MAX. It is on the wire because
+		otherwise every screen that draws a pedestal grid has to re-implement
+		that sum from `passes` and Constants — two of them did, which is two
+		places for the rule to drift from the one the server enforces.
+	]]
+	denSlotsTotal: number,
 	lockLevel: number,
 	mixdex: { [string]: number },
 	secretsFound: { [string]: boolean },

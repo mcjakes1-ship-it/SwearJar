@@ -50,10 +50,18 @@ Net.SERVER_TO_CLIENT = {
 	"Announce", -- (announcement: Types.Announcement)
 	--[[
 		Notify(kind, text, data?) — every player-facing refusal and confirmation.
-		`kind` is one of: "Error", "Success", "Info", "Code", "Chat". "Chat" is
-		the one that is not a toast: TextChatService has no server-callable
-		broadcast, so a Mythic/Secret chat line (GDD §7.3) is relayed here for
-		the client to put in the chat window.
+
+		`kind` names the CHANNEL, not the severity, so the screen that cares can
+		listen for its own and the alert layer can colour the rest:
+		  "Shop" "Mixer" "Den" "Steal" "Code"  — one per screen
+		  "Success" "Error" "Info"             — general
+		  "Chat"                               — NOT a toast. TextChatService has
+		    no server-callable broadcast, so a Mythic/Secret chat line
+		    (GDD §7.3) is relayed here for the client to put in the chat window.
+
+		A client must render an UNKNOWN kind neutrally rather than dropping it:
+		a new channel appearing before the alert layer knows about it should be
+		visible, not silent.
 	]]
 	"Notify",
 	"TheftAlert", -- (alert: Types.TheftAlert, position: Vector3?)

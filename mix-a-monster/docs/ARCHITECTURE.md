@@ -100,7 +100,10 @@ toPlayer(player, a: Announcement)
 nearby(position: Vector3, radius: number, a: Announcement)   -- "Local" scope
 server(a: Announcement)                                       -- this server's banner
 global(a: Announcement)                                       -- MessagingService, all servers
-forRoll(player, mixlingView, tier)   -- routes by Rarity.announceScope
+forRoll(player, mixlingView, tier, globalOk: boolean?)
+    -- routes by Rarity.announceScope. globalOk=false keeps the server banner
+    -- but suppresses the cross-server publish; only MixerService knows whether
+    -- a secret is this server's first discovery (GDD §7.4).
 ```
 
 ### EconomyService

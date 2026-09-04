@@ -96,6 +96,7 @@ local LocalPlayer = Players.LocalPlayer
 
 local PROFILE_WAIT = 30 -- matches Net's own remote wait; past it, no tutorial
 local WORLD_WAIT = 20 -- Blendburg replicates as one burst; this is the ceiling
+local DEN_WAIT = 1 -- how long the opening shot waits for this player's Den slot
 
 -- The opening pan. Short by design: it is over before the 3 s bubble beat,
 -- and any input ends it sooner (GDD §5).
@@ -500,6 +501,7 @@ local function buildPath(from: Vector3, to: Vector3)
 	pathFolder = folder
 	pathOrigin = from
 	pathTarget = to
+	pathFade = 0 -- a new line always arrives by fading in, never by popping in
 end
 
 --[[
@@ -999,7 +1001,7 @@ local function tick(now: number)
 	end
 
 	-- GDD §5 puts the first prompt at 3 s; the pan owns the seconds before it.
-	local due = now - startedAt >= BUBBLE_DELAY or beat ~= "mix"
+	local due = (now - startedAt >= BUBBLE_DELAY) or beat ~= "mix"
 	if guide.dismissed or not due then
 		hideGuide()
 	else
@@ -1053,7 +1055,8 @@ local function watchInventory(inventory: { [string]: number })
 	end
 	for name, count in inventory do
 		if count > (previous[name] or 0) then
-			cue("Purchase")
+			-- No cue: ShopController plays "Purchase" off this same sync, and
+			-- two of them is one purchase that sounds like two.
 			completeTutorial()
 			return
 		end
@@ -1104,6 +1107,9 @@ local function connectWatchers()
 			end
 			local view = ClientState.get()
 			for _, key in keys :: { string } do
+				if finished then
+					return -- a purchase in this very patch ended the tutorial
+				end
 				if key == "inventory" then
 					watchInventory(view.inventory)
 				elseif key == "placed" or key == "stats" then
@@ -1195,6 +1201,13 @@ local function begin()
 			LocalPlayer.CharacterAdded:Wait()
 		end
 		Workspace:WaitForChild(WORLD_ROOT, WORLD_WAIT)
+		-- The shot opens on this player's own pedestals, so the Den slot is
+		-- worth a moment; past DEN_WAIT the pan frames them from where they
+		-- are standing, which is inside that Den anyway.
+		local deadline = os.clock() + DEN_WAIT
+		while not denSlot and os.clock() < deadline do
+			task.wait(0.1)
+		end
 		if not finished and running then
 			panCamera()
 		end

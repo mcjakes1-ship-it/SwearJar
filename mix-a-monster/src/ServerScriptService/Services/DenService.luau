@@ -57,6 +57,7 @@
 	leak when a player leaves mid-lock.
 ]]
 
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local PhysicsService = game:GetService("PhysicsService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -554,6 +555,14 @@ local function buildPedestals(den: Den)
 		number.Name = "PedestalIndex"
 		number.Value = index
 		number.Parent = pedestal
+
+		-- GDD §11.4: "use CollectionService tags for pedestals/doors". Without
+		-- the tag every client that needs to find a pedestal — the idle-sound
+		-- pass, the tutorial's placement bubble — has to walk Workspace and
+		-- key on this service's naming convention, which then cannot change.
+		CollectionService:AddTag(pedestal, "Pedestal")
+		pedestal:SetAttribute("DenSlot", den.slotIndex)
+		pedestal:SetAttribute("PedestalIndex", index)
 
 		den.pedestals[index] = pedestal
 	end
@@ -1412,6 +1421,13 @@ local function assign(player: Player, profile: Profile)
 	slotOwner[slotIndex] = player
 	ownerByFolder[denFolder] = player
 
+	-- Stamp the tenant on the folder so a client can find its own Den by
+	-- lookup instead of by inferring it from WorldService's naming scheme.
+	-- Attributes replicate, so this is readable from a LocalScript.
+	denFolder:SetAttribute("OwnerUserId", player.UserId)
+	denFolder:SetAttribute("DenSlot", slotIndex)
+	CollectionService:AddTag(denFolder, "Den")
+
 	buildPedestals(den)
 	bindSign(den)
 	refreshSlots(den, true)
@@ -1431,6 +1447,10 @@ local function assign(player: Player, profile: Profile)
 		data.push(player, {
 			placed = profile.placed,
 			denSlots = profile.denSlots,
+			-- The number every pedestal grid should actually draw against: the
+			-- pass bonus included, clamped, decided here rather than re-derived
+			-- from `passes` by each screen that needs it.
+			denSlotsTotal = DenService.totalSlots(player),
 			shielded = den.shieldOn,
 			shieldEndsAt = shieldUntil[player] or 0,
 		})
@@ -1464,6 +1484,7 @@ local function release(player: Player)
 	if den then
 		slotOwner[den.slotIndex] = nil
 		ownerByFolder[den.folder] = nil
+		den.folder:SetAttribute("OwnerUserId", nil)
 
 		-- WorldService's sign outlives the tenant, so hand it back blank
 		-- rather than leaving a departed player's name over an empty Den.

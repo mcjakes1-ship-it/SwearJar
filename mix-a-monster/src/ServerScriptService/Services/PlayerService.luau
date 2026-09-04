@@ -136,6 +136,7 @@ type SyncView = {
 	mixlings: { MixlingView },
 	placed: { [string]: string },
 	denSlots: number,
+	denSlotsTotal: number,
 	lockLevel: number,
 	mixdex: { [string]: number },
 	secretsFound: { [string]: boolean },
@@ -179,7 +180,17 @@ local CARRYING = "Not while you are carrying that — run it home yourself!"
 -- The client reports these three beats (GDD §5). The server records that they
 -- happened and nothing else: the beams, bubbles and paths are the client's,
 -- and nothing here gates movement.
+--[[
+	The three steps that MEAN the tutorial is finished. tutorialDone flips when
+	the profile holds all three, so the server decides completion from what the
+	player actually did rather than from a client saying it is done.
+
+	"done" is accepted as a synonym for "the client believes it has finished"
+	and is recorded for telemetry, but it does not by itself complete anything —
+	see recordStep.
+]]
 local TUTORIAL_STEPS = { "mixed", "placed", "bought" }
+local TUTORIAL_DONE_STEP = "done"
 
 -- The scripted banner names its roller in prose only. It is deliberately not
 -- a username: no player rolled this, and nothing may be able to look one up.
@@ -585,6 +596,7 @@ local function fullView(player: Player, profile: Profile): SyncView
 		mixlings = mixlings,
 		placed = profile.placed,
 		denSlots = profile.denSlots,
+		denSlotsTotal = if den then den.totalSlots(player) else profile.denSlots,
 		lockLevel = profile.lockLevel,
 		mixdex = profile.mixdex,
 		secretsFound = profile.secretsFound,
@@ -1086,6 +1098,16 @@ local function connectRemotes()
 			return
 		end
 		local name = step :: string
+		if name == TUTORIAL_DONE_STEP then
+			-- The client saying "I am finished" is telemetry, not authority:
+			-- tutorialDone still flips only once the profile holds all three
+			-- real steps. Recorded so a funnel can see a player who skipped
+			-- ahead by walking away, which GDD §5 explicitly allows.
+			if analytics then
+				analytics.event("TutorialClientDone", { player = player })
+			end
+			return
+		end
 		if not table.find(TUTORIAL_STEPS, name) then
 			return
 		end

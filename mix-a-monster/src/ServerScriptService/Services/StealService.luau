@@ -259,8 +259,9 @@ end
 --[[
 	The alert the owner's HUD draws (GDD §8.4.2): a banner and a compass arrow
 	pointing at the thief. `position` is refreshed on the heartbeat while the
-	carry lasts, which is why a client must key its banner on
-	(kind, mixlingName, thiefUserId) and treat a repeat as a compass update.
+	carry lasts, and those refreshes go out as kind "Tracking" rather than a
+	repeated "Started" — a client that read them as new events would toast the
+	victim once a second for the whole chase.
 ]]
 local function alertOwner(owner: Player?, kind: AlertKind, view: MixlingView, thief: Player?, position: Vector3?)
 	if not owner or not owner.Parent then

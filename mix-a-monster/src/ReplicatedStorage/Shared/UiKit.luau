@@ -62,9 +62,27 @@ end
 
 -- ── Primitives ───────────────────────────────────────────────────────────
 
+--[[
+	Keys applyCommon consumes itself rather than assigning to the Instance.
+	Everything NOT listed here is written straight onto the object, which is
+	what makes the kit terse — and is exactly why the list has to be complete:
+	a documented prop missing from it throws "X is not a valid member of
+	TextLabel" at runtime, and `props` is `{ [string]: any }`, so the type
+	checker cannot see it coming.
+]]
+local RESERVED = {
+	Parent = true,
+	Corner = true,
+	Stroke = true,
+	Padding = true,
+	Gradient = true,
+	MaxTextSize = true,
+	MinTextSize = true,
+}
+
 local function applyCommon(instance: GuiObject, props: { [string]: any })
 	for key, value in props do
-		if key ~= "Parent" and key ~= "Corner" and key ~= "Stroke" and key ~= "Padding" and key ~= "Gradient" then
+		if not RESERVED[key] then
 			(instance :: any)[key] = value
 		end
 	end
@@ -79,6 +97,16 @@ local function applyCommon(instance: GuiObject, props: { [string]: any })
 		stroke.Thickness = 2
 		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 		stroke.Parent = instance
+	end
+	if props.Gradient then
+		local gradient = Instance.new("UIGradient")
+		if typeof(props.Gradient) == "ColorSequence" then
+			gradient.Color = props.Gradient
+		elseif type(props.Gradient) == "table" then
+			gradient.Color = ColorSequence.new(props.Gradient[1], props.Gradient[2])
+			gradient.Rotation = props.Gradient[3] or 90
+		end
+		gradient.Parent = instance
 	end
 	if props.Padding then
 		local padding = Instance.new("UIPadding")
@@ -269,6 +297,65 @@ function UiKit.viewport(props: { [string]: any }): (ViewportFrame, (Model?) -> (
 	return viewport, setModel
 end
 
+--[[
+	Text entry. Sized to the touch minimum on its short edge like a button,
+	because a code field a thumb cannot hit is a code field nobody redeems.
+]]
+function UiKit.textBox(props: { [string]: any }): TextBox
+	local box = Instance.new("TextBox")
+	box.BackgroundColor3 = UiKit.PALETTE.ink
+	box.BorderSizePixel = 0
+	box.Font = UiKit.FONT_BODY
+	box.TextColor3 = UiKit.PALETTE.text
+	box.PlaceholderColor3 = UiKit.PALETTE.muted
+	box.TextScaled = true
+	box.ClearTextOnFocus = false
+	box.Text = ""
+	applyCommon(box, props)
+
+	local minimum = Instance.new("UISizeConstraint")
+	minimum.MinSize = Vector2.new(UiKit.TOUCH_MIN, UiKit.TOUCH_MIN)
+	minimum.Parent = box
+
+	local textSize = Instance.new("UITextSizeConstraint")
+	textSize.MaxTextSize = (props.MaxTextSize :: number?) or 24
+	textSize.MinTextSize = (props.MinTextSize :: number?) or 8
+	textSize.Parent = box
+	return box
+end
+
+--[[
+	A world-anchored panel: overhead nameplates, den signs, tutorial bubbles.
+	`AlwaysOnTop` is off by default — a nameplate that draws through walls
+	turns the Den ring into a wallhack, which matters in a game about sneaking
+	into someone else's Den.
+]]
+function UiKit.billboard(adornee: Instance, props: { [string]: any }): BillboardGui
+	local gui = Instance.new("BillboardGui")
+	if adornee:IsA("BasePart") then
+		gui.Adornee = adornee
+	elseif adornee:IsA("Model") then
+		local root = adornee.PrimaryPart or adornee:FindFirstChildWhichIsA("BasePart", true)
+		if root then
+			gui.Adornee = root
+		end
+	end
+	gui.Size = UDim2.fromOffset(200, 50)
+	gui.StudsOffsetWorldSpace = Vector3.new(0, 3, 0)
+	gui.AlwaysOnTop = false
+	gui.MaxDistance = 120
+	gui.LightInfluence = 0
+	for key, value in props do
+		if key ~= "Parent" then
+			(gui :: any)[key] = value
+		end
+	end
+	if props.Parent then
+		gui.Parent = props.Parent
+	end
+	return gui
+end
+
 -- ── Motion ───────────────────────────────────────────────────────────────
 
 function UiKit.tween(instance: Instance, props: { [string]: any }, duration: number?, style: Enum.EasingStyle?): Tween
@@ -278,10 +365,20 @@ function UiKit.tween(instance: Instance, props: { [string]: any }, duration: num
 	return tween
 end
 
+--[[
+	A quick squash-and-release. Scales BOTH halves of the UDim2: an earlier
+	version touched only the Scale components, which made it a silent no-op on
+	any element sized purely in offsets — i.e. most of the HUD.
+]]
 function UiKit.pop(instance: GuiObject, strength: number?)
-	local amount = strength or 0.12
+	local amount = 1 - (strength or 0.12)
 	local base = instance.Size
-	instance.Size = UDim2.new(base.X.Scale * (1 - amount), base.X.Offset, base.Y.Scale * (1 - amount), base.Y.Offset)
+	instance.Size = UDim2.new(
+		base.X.Scale * amount,
+		base.X.Offset * amount,
+		base.Y.Scale * amount,
+		base.Y.Offset * amount
+	)
 	UiKit.tween(instance, { Size = base }, 0.18, Enum.EasingStyle.Back)
 end
 

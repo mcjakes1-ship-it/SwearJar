@@ -31,7 +31,6 @@
 	from the server; this file only chooses how loud they are.
 ]]
 
-local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
@@ -44,7 +43,6 @@ local Rarity = require(Config:WaitForChild("Rarity"))
 local Assembler = require(Shared:WaitForChild("MixlingAssembler"))
 local Types = require(Shared:WaitForChild("Types"))
 local UiKit = require(Shared:WaitForChild("UiKit"))
-local Util = require(Shared:WaitForChild("Util"))
 
 local ClientState = require(script.Parent.Parent:WaitForChild("ClientState"))
 
@@ -62,7 +60,6 @@ local DUCK_LEVEL = 0.22 -- how far the bed drops under a big reveal
 local DUCK_IN = 0.12 -- fast down: the slam must land in a hole, not a fade
 local DUCK_OUT = 0.8 -- slow up: the music creeps back while the card is read
 local ONE_SHOT_LIFETIME = 8 -- cleanup ceiling; longer than any voice + tail
-local IDLE_TICK = 1 -- one pass over the Dens per second, like DenService's
 local REVEAL_VOLUME_BASE = 0.45
 local REVEAL_VOLUME_STEP = 0.08 -- a rarer reveal is louder as well as lower
 
@@ -81,13 +78,7 @@ local MUSIC_TRACK = "Blendburg"
 -- and a "Dens" folder inside it; DenService stamps each display model with a
 -- "MixlingId" StringValue, which is how a Mixling on a pedestal is told from
 -- the scenery around it.
-local PEDESTAL_TAG = "Pedestal"
-local WORLD_ROOT = "Blendburg"
-local DENS_FOLDER = "Dens"
-local MIXLING_MARKER = "MixlingId"
-local SOUND_FOLDER = "MixSound" -- built by MixlingAssembler onto the PrimaryPart
 
-local rng = Random.new() -- cosmetic only: which pedestal chirps next
 
 -- ── Asset lookup ─────────────────────────────────────────────────────────
 
@@ -179,6 +170,18 @@ end
 local function applyVolumes()
 	sfxGroup.Volume = if sfxOn then SFX_VOLUME else 0
 	musicGroup.Volume = musicTarget()
+
+	--[[
+		Mixling voices are played by the SERVER (the idle chirps on pedestals,
+		whose throttle GDD §18 requires server-side), so this client cannot
+		stop them one Sound at a time. It can mute the group they all belong
+		to, and a SoundGroup's Volume is a local property: turning sfx off
+		silences them here and changes nothing for anyone else.
+	]]
+	local mixGroup = Assembler.soundGroup()
+	if mixGroup then
+		mixGroup.Volume = if sfxOn then 1 else 0
+	end
 	if musicOn and bedWanted then
 		startBed()
 	else
@@ -259,6 +262,10 @@ local CUES: { [string]: Cue } = {
 -- the player is hearing the machine or the monster.
 local REVEAL_TIERS: { [string]: number } = {
 	RevealCommon = Rarity.COMMON,
+	-- Uncommon is the rigged first roll (GDD §5, Constants.STARTER.riggedRarity),
+	-- so it is the one reveal every new player is guaranteed to hear. It needs
+	-- its own cue more than most.
+	RevealUncommon = Rarity.UNCOMMON,
 	RevealRare = Rarity.RARE,
 	RevealEpic = Rarity.EPIC,
 	RevealLegendary = Rarity.LEGENDARY,
@@ -440,167 +447,26 @@ end
 
 -- ── Idle chirps on pedestals (GDD §7.5) ──────────────────────────────────
 --[[
-	Every Constants.IDLE_SOUND_INTERVAL seconds a placed Mixling may chirp, at
-	most one per Constants.IDLE_SOUND_MIN_GAP_PER_DEN seconds per Den.
+	There is deliberately NO client-side idle scheduler here.
 
-	THIS THROTTLE IS A COURTESY, NOT A BOUND. GDD §18 names ten Dens of idle
-	sounds as a real cacophony risk and requires the limit server-side, "not
-	just client" — DenService runs the same pass and its throttle is the one
-	that actually holds, because a client can be edited and this one then
-	protects nobody but the player running it. What this pass adds is a chirp
-	that obeys THIS player's sfx toggle and skips a Mixling that is already
-	speaking, neither of which the server can know.
+	GDD §7.5 wants a placed Mixling to chirp every 20-40 s, at most one per Den
+	per 5 s, and §18 names ten Dens of idle sounds as a real cacophony risk
+	whose throttle "must be enforced server-side, not just client". DenService
+	runs exactly that pass, and a Sound it plays under a pedestal model
+	replicates to everyone — so the chirp already reaches this player, already
+	throttled by the only clock an exploiter cannot edit.
+
+	An earlier version ran a second pass here as a "courtesy" layer. Two
+	independent schedulers over the same Dens is not a courtesy: it is up to
+	twice the intended chirp rate, which is precisely the failure §18 warns
+	about. It was inaudible only because no audio asset has landed yet, and it
+	would have started double-firing the day the owner's sounds shipped.
+
+	What this player's sfx toggle still needs is a way to silence those
+	server-played sounds locally. That is the SoundGroup below: MixlingAssembler
+	assigns every Mixling sound to it, and muting a SoundGroup on this client
+	changes nothing for anybody else.
 ]]
-
-type DenIdle = { nextAt: number, lastAt: number }
-
-local idleState: { [Instance]: DenIdle } = {}
-
-local function densFolder(): Instance?
-	local root = Workspace:FindFirstChild(WORLD_ROOT)
-	if not root then
-		return nil
-	end
-	return root:FindFirstChild(DENS_FOLDER)
-end
-
--- The Den a world instance belongs to: the ancestor sitting directly in the
--- "Dens" folder. Grouping by that is what makes the per-Den throttle per-Den.
-local function denOf(instance: Instance, dens: Instance): Instance?
-	local node: Instance? = instance
-	while node and node.Parent ~= dens do
-		node = node.Parent
-	end
-	return node
-end
-
-local function mixlingsIn(den: Instance): { Model }
-	local out: { Model } = {}
-	for _, descendant in den:GetDescendants() do
-		if descendant:IsA("Model") and descendant:FindFirstChild(MIXLING_MARKER) then
-			table.insert(out, descendant)
-		end
-	end
-	return out
-end
-
---[[
-	Every Den that currently has something standing in it, and what.
-
-	GDD §11.4 asks the server to tag pedestals, so the tagged set is consulted
-	first and needs no change here when DenService starts tagging. It does not
-	today, so what actually runs is the walk below: the "Dens" folder is the
-	Den list and the Assembler's MixlingId marker is the pedestal occupancy.
-]]
-local function occupiedDens(): { [Instance]: { Model } }
-	local out: { [Instance]: { Model } } = {}
-	local dens = densFolder()
-	if not dens then
-		return out
-	end
-
-	local roots: { Instance } = {}
-	for _, tagged in CollectionService:GetTagged(PEDESTAL_TAG) do
-		local den = denOf(tagged, dens)
-		if den and not out[den] then
-			out[den] = {}
-			table.insert(roots, den)
-		end
-	end
-	if #roots == 0 then
-		roots = dens:GetChildren()
-	end
-
-	for _, den in roots do
-		local models = mixlingsIn(den)
-		if #models > 0 then
-			out[den] = models
-		else
-			out[den] = nil
-		end
-	end
-	return out
-end
-
--- Plays a display model's own replicated voice. Returns false when it had
--- nothing to say, so a silent pick does not spend the Den's throttle window.
-local function chirp(model: Model): boolean
-	local root = model.PrimaryPart
-	if not root then
-		return false
-	end
-
-	local folder = root:FindFirstChild(SOUND_FOLDER)
-	if folder then
-		local voices: { Sound } = {}
-		for _, child in folder:GetChildren() do
-			if child:IsA("Sound") then
-				if child.IsPlaying then
-					return false -- already speaking; nothing talks over itself
-				end
-				-- Adopt it: the server made these, and routing them through the
-				-- SFX group is what puts them under the player's sfx toggle.
-				child.SoundGroup = sfxGroup
-				table.insert(voices, child)
-			end
-		end
-		if #voices > 0 then
-			for _, voice in voices do
-				voice:Play()
-			end
-			return true
-		end
-	end
-
-	-- No sound folder (an authored asset, or a model built without one): fall
-	-- back to the values the Assembler stamps on every Mixling it builds.
-	local critter = model:FindFirstChild("Critter")
-	local stuff = model:FindFirstChild("Stuff")
-	local tier = model:FindFirstChild("RarityTier")
-	if not (critter and critter:IsA("StringValue")) then
-		return false
-	end
-	if not (stuff and stuff:IsA("StringValue")) then
-		return false
-	end
-	if not (tier and tier:IsA("IntValue")) then
-		return false
-	end
-	playPair(critter.Value, stuff.Value, tier.Value, root.Position)
-	return true
-end
-
-local function idlePass(clock: number)
-	if not sfxOn then
-		return
-	end
-
-	-- Rebuilt every pass rather than kept: a Den is destroyed whole when its
-	-- owner leaves, and a table keyed on dead Instances would hold them all
-	-- session.
-	local fresh: { [Instance]: DenIdle } = {}
-
-	for den, models in occupiedDens() do
-		local state: DenIdle = idleState[den]
-			or {
-				nextAt = clock + rng:NextNumber(Constants.IDLE_SOUND_INTERVAL[1], Constants.IDLE_SOUND_INTERVAL[2]),
-				lastAt = 0,
-			}
-		fresh[den] = state
-
-		if clock >= state.nextAt then
-			state.nextAt = clock + rng:NextNumber(Constants.IDLE_SOUND_INTERVAL[1], Constants.IDLE_SOUND_INTERVAL[2])
-			if clock - state.lastAt >= Constants.IDLE_SOUND_MIN_GAP_PER_DEN then
-				local choice = Util.pick(models, rng)
-				if choice and chirp(choice) then
-					state.lastAt = clock
-				end
-			end
-		end
-	end
-
-	idleState = fresh
-end
 
 -- ── Lifecycle ────────────────────────────────────────────────────────────
 
@@ -630,12 +496,6 @@ function SoundController.start()
 		end
 	end)
 
-	task.spawn(function()
-		while true do
-			task.wait(IDLE_TICK)
-			idlePass(os.clock())
-		end
-	end)
 end
 
 return SoundController

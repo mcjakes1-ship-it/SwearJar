@@ -26,6 +26,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Ingredients = require(ReplicatedStorage:WaitForChild("Config"):WaitForChild("Ingredients"))
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared:WaitForChild("Net"))
 local Util = require(Shared:WaitForChild("Util"))
@@ -37,6 +38,11 @@ local ClientState = {}
 local MERGE_KEYS = {
 	mixdex = true,
 	secretsFound = true,
+	-- `secrets` carries the display rows for secrets this player has found, and
+	-- PlayerService pushes a delta of ONE row the moment another is produced.
+	-- Replacing the map instead of merging it dropped every earlier secret's
+	-- name and pair from the Mixdex until the next full sync.
+	secrets = true,
 	passes = true,
 	titles = true,
 	badges = true,
@@ -50,6 +56,7 @@ export type View = {
 	mixlings: { Types.MixlingView },
 	placed: { [string]: string },
 	denSlots: number,
+	denSlotsTotal: number,
 	lockLevel: number,
 	mixdex: { [string]: number },
 	secretsFound: { [string]: any },
@@ -75,6 +82,7 @@ local view: View = {
 	mixlings = {},
 	placed = {},
 	denSlots = 5,
+	denSlotsTotal = 5,
 	lockLevel = 1,
 	mixdex = {},
 	secretsFound = {},
@@ -147,14 +155,27 @@ function ClientState.unplacedMixlings(): { Types.MixlingView }
 	return out
 end
 
-function ClientState.inventoryOf(kind: string): { { name: string, count: number } }
+--[[
+	What the player owns of one shelf, ordered the way a picker should read it:
+	by tier, then by name. `kind` is "Critter" or "Stuff"; pass nil for
+	everything.
+
+	This used to accept `kind` and ignore it, which silently offered Stuff in
+	the Critter slot. Filtering here rather than in each caller is the point of
+	the helper.
+]]
+function ClientState.inventoryOf(kind: string?): { { name: string, count: number, tier: number } }
 	local out = {}
 	for name, count in view.inventory do
-		if count > 0 then
-			table.insert(out, { name = name, count = count })
+		local item = Ingredients.get(name)
+		if count > 0 and item and (kind == nil or item.kind == kind) then
+			table.insert(out, { name = name, count = count, tier = item.tier })
 		end
 	end
 	table.sort(out, function(a, b)
+		if a.tier ~= b.tier then
+			return a.tier < b.tier
+		end
 		return a.name < b.name
 	end)
 	return out
