@@ -124,8 +124,9 @@ export type DailyState = {
 	    does (MixerService's `mixlingAdded`) and the client's cache is typed
 	    that way, so a full send of raw rows would be the only shape on the
 	    wire without a display name or a rate.
-	  * `secrets` and `dailyState` are added: both are server-resolved data
-	    the client cannot derive, and neither exists as a profile field.
+	  * `secrets`, `dailyState` and the two Mixdex figures are added: all of
+	    them are server-resolved data the client cannot derive, and none of
+	    them exists as a profile field.
 ]]
 type SyncView = {
 	goop: number,
@@ -139,6 +140,8 @@ type SyncView = {
 	mixdex: { [string]: number },
 	secretsFound: { [string]: boolean },
 	secrets: { [string]: SecretView },
+	mixdexDiscovered: number,
+	mixdexTotal: number,
 	stats: Types.Stats,
 	daily: Types.Daily,
 	dailyState: DailyState,
@@ -294,7 +297,7 @@ end
 	ledger is the same one that service pushes from, so a cold cache costs one
 	stale answer and is corrected by its own push moments later.
 ]]
-local function luckOf(player: Player, profile: Profile): number
+local function luckOf(profile: Profile): number
 	local luck = 0
 	if monetization then
 		local server = monetization.getServerLuck()
@@ -306,6 +309,23 @@ local function luckOf(player: Player, profile: Profile): number
 		luck += Constants.PASSES.LuckyMixer.luck
 	end
 	return luck
+end
+
+--[[
+	The two figures behind the HUD's Mixdex percentage (GDD §10) live in no
+	profile field, so a full view without them would leave the header reading
+	0 until MixdexService's own load push arrived. Both are derived from the
+	same profile by the same service, so the two pushes cannot disagree.
+]]
+local function mixdexProgress(player: Player): (number, number)
+	if not mixdex then
+		return 0, 0
+	end
+	local discovered, total = mixdex.progress(player)
+	if not Net.isFiniteNumber(discovered) or not Net.isFiniteNumber(total) then
+		return 0, 0
+	end
+	return discovered, total
 end
 
 local function goopPerSecOf(player: Player): number
@@ -553,6 +573,7 @@ local function fullView(player: Player, profile: Profile): SyncView
 	for _, mixling in profile.mixlings do
 		table.insert(mixlings, viewOf(mixling))
 	end
+	local discovered, total = mixdexProgress(player)
 
 	-- Profile tables go over by reference, the way every delta push does:
 	-- Net serialises at fire time and nothing here mutates them afterwards.
@@ -568,6 +589,8 @@ local function fullView(player: Player, profile: Profile): SyncView
 		mixdex = profile.mixdex,
 		secretsFound = profile.secretsFound,
 		secrets = secretRows(profile),
+		mixdexDiscovered = discovered,
+		mixdexTotal = total,
 		stats = profile.stats,
 		daily = profile.daily,
 		dailyState = dailyState(player, profile),
@@ -577,7 +600,7 @@ local function fullView(player: Player, profile: Profile): SyncView
 		tutorialDone = profile.tutorialDone,
 		shielded = den ~= nil and den.isShielded(player) == true,
 		shieldEndsAt = shieldEndsAt(player, profile),
-		luck = luckOf(player, profile),
+		luck = luckOf(profile),
 	}
 end
 
@@ -973,7 +996,7 @@ local function queryOdds(player: Player): any
 	if not profile then
 		return nil
 	end
-	return Rarity.odds(luckOf(player, profile))
+	return Rarity.odds(luckOf(profile))
 end
 
 --[[
@@ -1101,9 +1124,14 @@ local function onLoaded(player: Player, profile: Profile)
 		grantStarter(player, profile)
 	end
 
-	-- Yielding is fine here: DataService fires onLoaded through Util.signal,
-	-- which spawns each handler on its own thread.
-	waitForSlot(player)
+	-- The full view describes a Den — `placed` and both shield fields — so it
+	-- waits for one rather than describing an empty Den and correcting itself
+	-- a second later. Yielding here is fine: DataService fires onLoaded
+	-- through Util.signal, which spawns every handler on its own thread.
+	if not waitForSlot(player) then
+		warn(("[PlayerService] syncing %s without a Den slot; their pedestals will fill in when one frees up")
+			:format(player.Name))
+	end
 	if not player.Parent then
 		return
 	end
@@ -1155,6 +1183,9 @@ function PlayerService.start()
 	if not den then
 		warn("[PlayerService] DenService is missing; there is no Den to spawn into and no Den list to serve.")
 	end
+	if not mixdex then
+		warn("[PlayerService] MixdexService is missing; the full sync will carry no collection progress.")
+	end
 
 	connectRemotes()
 
@@ -1201,10 +1232,6 @@ function PlayerService.start()
 				data.push(player, { secrets = { [secretId] = secretRow(secret) } })
 			end
 		end)
-	end
-
-	if not mixdex then
-		warn("[PlayerService] MixdexService is missing; the collection log will not report its progress.")
 	end
 
 	task.spawn(function()
