@@ -10,7 +10,12 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TOOLS="${LUAU_TOOLS:-$ROOT/.tools}"
 cd "$ROOT"
 
-python3 tools/sourcemap.py 2>/dev/null
+
+# A private sourcemap per invocation: several agents/terminals may run this
+# concurrently and must not race on one shared file.
+MAP="$(mktemp -t mixmap.XXXXXX.json)"
+trap 'rm -f "$MAP"' EXIT
+python3 tools/sourcemap.py "$MAP" 2>/dev/null
 
 FILES=()
 if [ "$#" -gt 0 ]; then FILES=("$@"); else
@@ -28,7 +33,7 @@ done
 [ "$fail" -eq 0 ] && echo "syntax: ${#FILES[@]} file(s) OK"
 
 "$TOOLS/luau-lsp" analyze \
-  --sourcemap=sourcemap.json \
+  --sourcemap="$MAP" \
   --definitions="$TOOLS/globalTypes.d.luau" \
   --settings=tools/luau-lsp.settings.json \
   --base-luaurc=tools/.luaurc \

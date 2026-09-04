@@ -60,7 +60,7 @@ def main():
         built = walk(directory, dm_parts[-1], leaf_class)
         cursor["children"].extend(built["children"])
 
-    out = os.path.join(ROOT, "sourcemap.json")
+    out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "sourcemap.json")
     with open(out, "w") as handle:
         json.dump(root, handle, indent=2)
     print(out, file=sys.stderr)
