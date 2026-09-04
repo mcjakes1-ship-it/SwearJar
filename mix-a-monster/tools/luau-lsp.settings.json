@@ -1,0 +1,7 @@
+{
+  "luau-lsp": {
+    "ignoreGlobs": [],
+    "diagnostics": { "strictDatamodelTypes": false },
+    "require": { "mode": "relativeToFile" }
+  }
+}
