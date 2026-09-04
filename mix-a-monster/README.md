@@ -12,11 +12,27 @@ Every ambiguous call and why it went that way: [`DECISIONS.md`](DECISIONS.md).
 
 ## Quick start
 
+You need [Rojo](https://rojo.space) — the CLI *and* the Studio plugin, and they
+must be the same major version (7.x):
+
 ```bash
-rojo serve                 # from this directory
+# CLI — pick one
+cargo install rojo                     # if you have Rust
+# or grab a binary from https://github.com/rojo-rbx/rojo/releases
+
+rojo plugin install                    # installs the matching Studio plugin
 ```
 
-Then in Studio: **Plugins → Rojo → Connect**, and press Play. The game is
+Then, from **this directory** (`mix-a-monster/`, not the repo root):
+
+```bash
+rojo serve
+```
+
+In Studio: open a new **Baseplate**, delete the baseplate part and the
+SpawnLocation (this game builds its own world and deliberately has no spawn —
+GDD §6, "No lobby. Ever."), then **Plugins → Rojo → Connect → Sync In**. Press
+Play. The game is
 playable immediately — Blendburg builds itself and every Mixling is generated
 procedurally, so **no art or sound assets are required to run it**. Drop real
 assets in later (§ *Adding art*) and nothing in the code changes.
