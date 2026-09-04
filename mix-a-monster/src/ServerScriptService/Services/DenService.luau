@@ -52,9 +52,9 @@
 
 	ONE LOOP, NOT ONE PER DEN (GDD §11.4). A single heartbeat walks the ≤10
 	live dens once a second and does every periodic job — lock expiry, shield
-	expiry, prompt gating, slot reconciliation, sign text, the DenSync
-	broadcast and the throttled idle sound. No per-den threads, no timers to
-	leak when a player leaves mid-lock.
+	expiry, prompt gating, slot reconciliation, the VIP aura, sign text, the
+	DenSync broadcast and the throttled idle sound. No per-den threads, no
+	timers to leak when a player leaves mid-lock.
 ]]
 
 local CollectionService = game:GetService("CollectionService")
@@ -105,8 +105,10 @@ export type Den = {
 	rateLabel: TextLabel?,
 	rateColor: Color3, -- the sign's own colour, restored when the lock lifts
 	shieldBoard: BillboardGui?,
+	aura: Folder?, -- the VIP fixture, or nil when the owner has no pass
 	stealAllowed: boolean,
 	shieldOn: boolean,
+	auraOn: boolean,
 	lastIntruderAt: number,
 	nextIdleAt: number,
 	lastIdleAt: number,
@@ -145,6 +147,25 @@ local BARRIER_COLOR = Color3.fromRGB(120, 190, 255)
 local TEXT_COLOR = Color3.fromRGB(248, 246, 255)
 local MUTED_COLOR = Color3.fromRGB(178, 170, 205)
 local WARN_COLOR = Color3.fromRGB(255, 186, 62)
+
+-- The VIP Den aura (GDD §9). Colours and dimensions like everything else in
+-- this section: art direction, not balance. Constants holds what a player
+-- earns and pays; what their Den looks like while they do belongs here. The
+-- gold is the chat tag's gold, so the two halves of one pass read as one
+-- thing.
+local AURA_COLOR = Color3.fromRGB(255, 208, 74)
+local AURA_HEIGHT = Constants.WORLD.DEN_SIZE.Y * 1.6 -- clears the Den shell, so it reads from across the plaza
+local AURA_WIDTH = 4 -- studs across the column
+local AURA_HALO_WIDTH = 12 -- the ring of light on the ground at its foot
+local AURA_HALO_THICKNESS = 0.3
+local AURA_TRANSPARENCY = 0.55
+local AURA_HALO_TRANSPARENCY = 0.35
+local AURA_DOOR_OFFSET = 3.5 -- studs out from the door plane, clear of the barrier
+local AURA_GROUND_LIFT = 0.1 -- studs off the floor: a coplanar face z-fights
+local AURA_MOTE_RATE = 6 -- particles/sec: one emitter per VIP Den, and the budget is a phone
+local AURA_MOTE_LIFETIME = 2 -- seconds
+local AURA_MOTE_SIZE = 0.6
+local AURA_MOTE_RISE = 3 -- studs/sec^2, upward
 
 local GROUP_BARRIER = "MixDenBarrier"
 local GROUP_PASS = "MixDenPass"
@@ -1091,6 +1112,110 @@ local function beginShield(player: Player, profile: Profile)
 	shieldUntil[player] = profile.firstJoin + Constants.NEW_PLAYER_SHIELD_SECONDS
 end
 
+-- ── The VIP aura (GDD §9) ────────────────────────────────────────────────
+
+--[[
+	GDD §9 sells VIP as "chat tag, Den aura, +50% daily reward". This is the
+	middle one: a column of light standing in the owner's doorway with a halo
+	on the ground at its foot, visible to everyone walking the ring.
+
+	NOTHING HERE IS ANIMATED FROM THE SERVER. A turning fixture would be a
+	CFrame per Den per frame on the wire, forever, to say what the colour
+	already says. Neon glows without a light source, so the column reads
+	across the plaza on a phone for the price of two parts, and the single
+	emitter — the only moving piece — is simulated on each client from a
+	description that replicates once. GDD §11.4 caps particles per Den for
+	exactly this reason, and this spends one emitter on the whole Den.
+
+	The aura is reconciled from the heartbeat the way pedestals are, so a pass
+	bought mid-session lights the Den up within a tick, and it hangs off
+	`den.built`, which is what makes releasing the slot take it away.
+]]
+
+-- A stood-up cylinder resting ON `ground`: `axis` is how far it rises from
+-- there, `diameter` its width. As with the pedestals, a cylinder's flat faces
+-- are on X, so it has to be rolled onto one end to point up.
+local function auraPart(name: string, axis: number, diameter: number, ground: Vector3): BasePart
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Shape = Enum.PartType.Cylinder
+	part.Size = Vector3.new(axis, diameter, diameter)
+	part.CFrame = CFrame.new(ground + Vector3.new(0, axis * 0.5, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	part.Anchored = true
+	part.CanCollide = false -- it stands in the doorway; it may never be a second door
+	part.CanQuery = false
+	part.CanTouch = false
+	part.CastShadow = false
+	part.Material = Enum.Material.Neon
+	part.Color = AURA_COLOR
+	return part
+end
+
+local function setAura(den: Den, on: boolean)
+	local existing = den.aura
+	if not on then
+		den.aura = nil
+		if existing then
+			existing:Destroy()
+		end
+		return
+	end
+	if existing then
+		return
+	end
+
+	local folder = Instance.new("Folder")
+	folder.Name = "VipAura"
+	folder.Parent = den.built
+
+	-- The door plane's centre sits half a doorway up, so this is the ground at
+	-- the threshold: stepped out far enough to clear the barrier plane, and
+	-- lifted a hair, because the halo's underside would otherwise be exactly
+	-- coplanar with the floor and a flickering ring reads as a bug.
+	local ground = den.door.Position
+		- Vector3.new(0, den.doorSize.Y * 0.5 - AURA_GROUND_LIFT, 0)
+		+ den.outward * AURA_DOOR_OFFSET
+
+	local column = auraPart("AuraColumn", AURA_HEIGHT, AURA_WIDTH, ground)
+	column.Transparency = AURA_TRANSPARENCY
+	column.Parent = folder
+
+	-- A wide, nearly flat disc of the same light: the halo is what a player
+	-- standing next to the door sees when the column is above their camera.
+	local halo = auraPart("AuraHalo", AURA_HALO_THICKNESS, AURA_HALO_WIDTH, ground)
+	halo.Transparency = AURA_HALO_TRANSPARENCY
+	halo.Parent = folder
+
+	local motes = Instance.new("ParticleEmitter")
+	motes.Name = "AuraMotes"
+	motes.Color = ColorSequence.new(AURA_COLOR)
+	motes.LightEmission = 1
+	motes.Rate = AURA_MOTE_RATE
+	motes.Lifetime = NumberRange.new(AURA_MOTE_LIFETIME, AURA_MOTE_LIFETIME * 1.5)
+	motes.Size = NumberSequence.new(AURA_MOTE_SIZE)
+	motes.Transparency = NumberSequence.new(AURA_TRANSPARENCY)
+	motes.Speed = NumberRange.new(0, 1)
+	-- Rise in WORLD space instead of out of a face: the column is a cylinder
+	-- rolled onto its end, so which way its faces point is an accident of that
+	-- rotation and not something to aim particles with.
+	motes.Acceleration = Vector3.new(0, AURA_MOTE_RISE, 0)
+	motes.Parent = column
+
+	den.aura = folder
+end
+
+-- Monetization owns the answer, including "the pass id is not wired yet", in
+-- which case this is false for everyone and nothing warns. The read can yield
+-- on a cold cache exactly as the slot bonus can (see `totalSlots`), which is
+-- why it is called from the heartbeat and from `assign`, never from a
+-- Touched handler.
+local function auraWanted(den: Den): boolean
+	if not monetization then
+		return false
+	end
+	return monetization.hasPass(den.player, "VIP") == true
+end
+
 -- ── Placement ────────────────────────────────────────────────────────────
 
 local function findMixling(profile: Profile, mixlingId: string): (Mixling?, number?)
@@ -1491,8 +1616,10 @@ local function assign(player: Player, profile: Profile)
 		rateLabel = nil,
 		rateColor = MUTED_COLOR,
 		shieldBoard = nil,
+		aura = nil,
 		stealAllowed = true,
 		shieldOn = false,
+		auraOn = false,
 		lastIntruderAt = 0,
 		nextIdleAt = os.clock() + rng:NextNumber(Constants.IDLE_SOUND_INTERVAL[1], Constants.IDLE_SOUND_INTERVAL[2]),
 		lastIdleAt = 0,
@@ -1517,6 +1644,9 @@ local function assign(player: Player, profile: Profile)
 	den.shieldOn = DenService.isShielded(player)
 	setShieldBoard(den, den.shieldOn)
 	den.stealAllowed = stealAllowed(den)
+
+	den.auraOn = auraWanted(den)
+	setAura(den, den.auraOn)
 
 	restorePlacements(den, profile)
 	refreshPrompts(den)
@@ -1633,6 +1763,15 @@ local function tickDen(den: Den, clock: number)
 		if data then
 			data.push(den.player, { shielded = shielded, shieldEndsAt = shieldUntil[den.player] or 0 })
 		end
+	end
+
+	-- The same reconcile the pedestals get: a VIP pass bought mid-session
+	-- lights the doorway up on the next tick, and a den whose owner never had
+	-- one never builds the fixture at all.
+	local wantsAura = auraWanted(den)
+	if wantsAura ~= den.auraOn then
+		den.auraOn = wantsAura
+		setAura(den, wantsAura)
 	end
 
 	refreshSlots(den)

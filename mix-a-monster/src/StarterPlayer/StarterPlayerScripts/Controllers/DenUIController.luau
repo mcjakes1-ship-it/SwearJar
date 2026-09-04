@@ -71,11 +71,27 @@
 	makes non-negotiable, so nothing shrinks: the shield strip, the lock block
 	and the grid stack in a single scrolling column and the player flicks.
 
-	PICKER ROWS HAVE NO VIEWPORT. Constants.MIXLING_SOFT_CAP is 400, and 400
-	ViewportFrames each holding an assembled model is a phone that stops
-	responding. The picker identifies a Mixling by its name in its rarity
-	colour and its rate; the models live on the fifteen pedestal cells, which
-	is a bounded number.
+	THE PICKER IS VIRTUALISED, AND NOTHING IN IT HOLDS A MODEL.
+	Constants.MIXLING_SOFT_CAP is 400. One row per unplaced Mixling is 400
+	rows for a phone to lay out, and 400 ViewportFrames each holding an
+	assembled model would be far worse — so the picker does neither. A Mixling
+	is identified by a rarity swatch, its name in its rarity colour and its
+	rate; the models live on the fifteen pedestal cells, which is a bounded
+	number. The rows are a recycled pool sized to the scroll window,
+	positioned by offset rather than by a UIListLayout (a layout would repack
+	recycled children and undo the recycling) and capped at MAX_PICKER_ROWS,
+	with the window itself capped at what that pool can serve. That is
+	deliberately the same shape as MixdexController's 261-tile grid: two
+	virtualised lists that read alike are worth more than a cleverer second
+	design.
+
+	AN OPEN PICKER SURVIVES SOMEONE ELSE'S PLACEMENT. DenSync fires whenever
+	ANY player's door or pedestal moves and this panel repaints on every one
+	of them, so a repaint recomputes the row list and paints it INTO the pool
+	that is already there. Nothing is destroyed, the scroll stays where the
+	player left it, and the row under a thumb is still under it when the thumb
+	lands. The take-back column is rebuilt only when the sentence it prints
+	changes, for the same reason.
 ]]
 
 local Players = game:GetService("Players")
@@ -133,7 +149,26 @@ local BUY_RESERVE = 52 -- vertical space a locked cell gives its BUY button
 local SUB_RESERVE = 4 -- ...and what every other cell gives instead
 
 local PICKER_ROW = 52
+local PICKER_NOTE = 34 -- the one line of instruction above the picker's list
 local SWATCH = 10 -- width of a picker row's rarity stripe
+
+--[[
+	The picker's virtualisation, sized the way MixdexController sizes its
+	grid. MAX_PICKER_ROWS is the ceiling on the row pool, and buildSheet caps
+	the scroll's own height at the number of rows that pool can serve, so a
+	very tall monitor cannot ask for a row that does not exist. That window
+	cap works out at 1,320px of list — HudController never gives a panel
+	anything close to it, so this is a guarantee rather than a constraint
+	anyone will meet.
+]]
+local PICKER_STRIDE = PICKER_ROW + GAP
+local PICKER_OVERSCAN = 1 -- one row painted ahead so a flick never shows a hole
+local MAX_PICKER_ROWS = 24
+
+-- The instruction line rides inside the canvas rather than above it, so it
+-- scrolls away instead of taking 42px off a landscape phone's picker — where
+-- the whole sheet is about 135px tall. Every row sits this far down.
+local PICKER_HEAD = PICKER_NOTE + GAP
 
 local SPIN_SPEED = 0.55 -- radians/sec in the pedestal viewports
 local TICK_INTERVAL = 0.2 -- countdown repaint; a mm:ss clock does not need 60 Hz
@@ -168,6 +203,11 @@ local sheet: Frame? = nil
 local sheetTitle: TextLabel? = nil
 local sheetList: ScrollingFrame? = nil
 local sheetRows: { GuiObject } = {}
+-- What the rows sheetRow built currently say. nil means "nothing built".
+local sheetKey: string? = nil
+
+local pickerNote: TextLabel? = nil
+local pickerScroll: ScrollingFrame? = nil
 
 type Cell = {
 	index: number,
@@ -185,6 +225,21 @@ type Cell = {
 }
 
 local cells: { Cell } = {}
+
+type PickerRow = {
+	button: TextButton,
+	swatch: Frame,
+	name: TextLabel,
+	detail: TextLabel,
+	key: string?, -- what this row is currently showing; nil when it shows nothing
+	mixlingId: string?,
+	wanted: boolean,
+}
+
+local pickerPool: { PickerRow } = {}
+local pickerChoices: { MixlingView } = {}
+local pickerFirst = 0
+local pickerLast = -1
 
 -- What the server last quoted for the two Den sinks. Nil until the first
 -- "ShopPrices" answer lands; every reader falls back to Constants, which is
@@ -211,11 +266,14 @@ local lastGridWidth = 0
 -- ── Small helpers ────────────────────────────────────────────────────────
 
 --[[
-	UiKit.label and UiKit.button each attach a UITextSizeConstraint and read
-	its ceiling from a `MaxTextSize` prop — but applyCommon assigns every prop
-	it does not recognise straight onto the instance, and `MaxTextSize` is not
-	a member of a TextLabel, so passing it throws. Reaching for the constraint
-	the kit already made is the way to raise a ceiling without editing UiKit.
+	Raises the ceiling on the UITextSizeConstraint UiKit already attached, for
+	a label whose size is set after construction.
+
+	This helper predates the fix to UiKit.applyCommon: passing `MaxTextSize` in
+	the prop table used to throw, because applyCommon assigned every key it did
+	not recognise straight onto the Instance. It no longer does — the prop works
+	— but reaching for the constraint is still the only way to change a ceiling
+	AFTER the object exists, which is what every call site here is doing.
 ]]
 local function textCeiling(gui: GuiObject, ceiling: number)
 	local constraint = gui:FindFirstChildOfClass("UITextSizeConstraint")
@@ -687,6 +745,7 @@ local function clearSheet()
 		row:Destroy()
 	end
 	table.clear(sheetRows)
+	sheetKey = nil
 end
 
 function closeSheet()
@@ -746,24 +805,22 @@ local function unplacedSorted(): { MixlingView }
 	return unplaced
 end
 
-local function buildPickerRow(order: number, mixling: MixlingView, index: number)
-	local holder = sheetRow(order, PICKER_ROW)
-	local color = Rarity.color(mixling.rarity)
+-- ── The picker's row pool ────────────────────────────────────────────────
 
+local function buildPickerRow(): PickerRow
 	local button = UiKit.button({
 		Text = "",
 		BackgroundColor3 = UiKit.PALETTE.panelSoft,
 		Corner = 10,
-		Size = UDim2.fromScale(1, 1),
-		Parent = holder,
-	}, function()
-		sendPlace(mixling.id, index)
-	end)
+		Size = UDim2.new(1, 0, 0, PICKER_ROW),
+		Visible = false,
+		Parent = pickerScroll,
+	})
 
-	-- A colour swatch rather than a model: see the header on why picker rows
-	-- carry no ViewportFrame.
-	UiKit.frame({
-		BackgroundColor3 = color,
+	-- A colour swatch rather than a model: see the header on why no row in
+	-- this list carries a ViewportFrame.
+	local swatch = UiKit.frame({
+		BackgroundColor3 = UiKit.PALETTE.stroke,
 		Size = UDim2.new(0, SWATCH, 1, -12),
 		Position = UDim2.fromOffset(8, 6),
 		Corner = 5,
@@ -771,8 +828,7 @@ local function buildPickerRow(order: number, mixling: MixlingView, index: number
 	})
 
 	local name = UiKit.label({
-		Text = mixling.displayName,
-		TextColor3 = color,
+		Text = "",
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Size = UDim2.new(1, -(SWATCH + 122), 0, 24),
 		Position = UDim2.new(0, SWATCH + 16, 0, 6),
@@ -781,7 +837,7 @@ local function buildPickerRow(order: number, mixling: MixlingView, index: number
 	textCeiling(name, 19)
 
 	local detail = UiKit.label({
-		Text = ("%s · %s Goop/sec"):format(Rarity.name(mixling.rarity), Util.abbreviate(mixling.goopPerSec)),
+		Text = "",
 		TextColor3 = UiKit.PALETTE.muted,
 		Font = UiKit.FONT_BODY,
 		TextXAlignment = Enum.TextXAlignment.Left,
@@ -800,6 +856,162 @@ local function buildPickerRow(order: number, mixling: MixlingView, index: number
 		Parent = button,
 	})
 	textCeiling(place, 18)
+
+	local row: PickerRow = {
+		button = button,
+		swatch = swatch,
+		name = name,
+		detail = detail,
+		key = nil,
+		mixlingId = nil,
+		wanted = false,
+	}
+
+	--[[
+		Both the Mixling and the pedestal are read at tap time rather than
+		captured. One pooled row serves every Mixling in the list and every
+		pedestal the player opens the picker from, so a captured pair would
+		place the wrong Mixling on the wrong plinth the second time round.
+	]]
+	button.Activated:Connect(function()
+		local id = row.mixlingId
+		local index = pickerIndex
+		if not id or not index then
+			return
+		end
+		sendPlace(id, index)
+	end)
+
+	return row
+end
+
+-- A row leaving the window forgets what it was showing, so nothing stale can
+-- be tapped and the next paint cannot mistake it for a hit.
+local function hidePickerRow(row: PickerRow)
+	if not row.button.Visible and row.key == nil then
+		return
+	end
+	row.button.Visible = false
+	row.key = nil
+	row.mixlingId = nil
+end
+
+--[[
+	The recycle key. Two rows showing the same Mixling at the same rate are
+	interchangeable, so a scroll that moves the window repaints only the rows
+	whose contents actually changed — and the rate is in the key because a
+	multiplier the server applied moves it under a row already on screen.
+]]
+local function pickerKeyOf(mixling: MixlingView): string
+	return mixling.id .. "@" .. tostring(mixling.goopPerSec)
+end
+
+local function paintPickerRow(row: PickerRow, mixling: MixlingView)
+	local color = Rarity.color(mixling.rarity)
+	row.mixlingId = mixling.id
+	row.swatch.BackgroundColor3 = color
+	row.name.Text = mixling.displayName
+	row.name.TextColor3 = color
+	row.detail.Text =
+		("%s · %s Goop/sec"):format(Rarity.name(mixling.rarity), Util.abbreviate(mixling.goopPerSec))
+end
+
+--[[
+	Assigns the visible slice of `pickerChoices` to the pool. Index -> row is
+	modular rather than sequential on purpose: as the window moves by one row,
+	only the rows that actually left change hands, so a flick repaints what
+	entered the screen and nothing else.
+]]
+local function paintPicker(force: boolean)
+	local scroll = pickerScroll
+	if not scroll or #pickerChoices == 0 then
+		-- Unconditional: an empty list has to take the rows off the screen,
+		-- and the range check below would happily keep them.
+		for _, row in pickerPool do
+			hidePickerRow(row)
+		end
+		pickerFirst, pickerLast = 0, -1
+		return
+	end
+
+	-- Negative while the instruction line is still on screen; the clamps below
+	-- are what make that harmless rather than a row index of -1.
+	local top = scroll.CanvasPosition.Y - PICKER_HEAD
+	local windowHeight = math.max(scroll.AbsoluteWindowSize.Y, 1)
+	local firstRow = math.max(0, math.floor(top / PICKER_STRIDE))
+	local lastRow = math.max(firstRow, math.floor((top + windowHeight) / PICKER_STRIDE) + PICKER_OVERSCAN)
+
+	local wanted = math.min(MAX_PICKER_ROWS, lastRow - firstRow + 1)
+	local first = firstRow + 1
+	local last = math.min(#pickerChoices, first + wanted - 1)
+	if not force and first == pickerFirst and last == pickerLast then
+		return
+	end
+	pickerFirst, pickerLast = first, last
+
+	while #pickerPool < wanted do
+		table.insert(pickerPool, buildPickerRow())
+	end
+
+	for _, row in pickerPool do
+		row.wanted = false
+	end
+
+	local pool = #pickerPool
+	for index = first, last do
+		local mixling = pickerChoices[index]
+		local row = pickerPool[(index - 1) % pool + 1]
+		row.wanted = true
+		row.button.Position = UDim2.fromOffset(0, PICKER_HEAD + (index - 1) * PICKER_STRIDE)
+		row.button.Visible = true
+
+		local key = pickerKeyOf(mixling)
+		if force or row.key ~= key then
+			row.key = key
+			paintPickerRow(row, mixling)
+		end
+	end
+
+	for _, row in pickerPool do
+		if not row.wanted then
+			hidePickerRow(row)
+		end
+	end
+end
+
+--[[
+	The list itself, recomputed from the sync. The canvas comes from the row
+	count and the scroll position is left where the player put it: a DenSync
+	arrives whenever ANY player places something, and an open picker that
+	jumped — or was destroyed and rebuilt — on every one of those would steal
+	the tap the player was in the middle of making.
+]]
+local function rebuildPickerRows()
+	pickerChoices = unplacedSorted()
+
+	local scroll = pickerScroll
+	if scroll then
+		local height = if #pickerChoices == 0
+			then PICKER_NOTE
+			else PICKER_HEAD + #pickerChoices * PICKER_STRIDE - GAP
+		scroll.CanvasSize = UDim2.fromOffset(0, height)
+		scroll.CanvasPosition = Vector2.new(0, math.min(scroll.CanvasPosition.Y, height))
+	end
+end
+
+-- ── The sheet's two bodies ───────────────────────────────────────────────
+
+-- The take-back column is four rows packed by a UIListLayout; the picker is
+-- the virtualised list above. Exactly one of them is ever up.
+local function showPickerBody(picking: boolean)
+	local scroll = pickerScroll
+	if scroll then
+		scroll.Visible = picking
+	end
+	local list = sheetList
+	if list then
+		list.Visible = not picking
+	end
 end
 
 local function renderPicker(index: number)
@@ -808,16 +1020,16 @@ local function renderPicker(index: number)
 		title.Text = ("PEDESTAL %d"):format(index)
 	end
 
-	local choices = unplacedSorted()
-	if #choices == 0 then
-		sheetNote(1, "Every Mixling you own is already on a pedestal. Go mix another one.", UiKit.PALETTE.muted)
-		return
+	rebuildPickerRows()
+
+	local note = pickerNote
+	if note then
+		note.Text = if #pickerChoices == 0
+			then "Every Mixling you own is already on a pedestal. Go mix another one."
+			else "Rarest first. Tap one to stand it on this pedestal."
 	end
 
-	sheetNote(1, "Rarest first. Tap one to stand it on this pedestal.", UiKit.PALETTE.muted)
-	for position, mixling in choices do
-		buildPickerRow(position + 1, mixling, index)
-	end
+	paintPicker(true)
 end
 
 local function renderTakeBack(index: number)
@@ -831,6 +1043,24 @@ local function renderTakeBack(index: number)
 	if title then
 		title.Text = ("PEDESTAL %d"):format(index)
 	end
+
+	--[[
+		Rebuilt only when what it says changes. DenSync fires on any player's
+		door or pedestal, and tearing this column down and putting it back
+		under the player's thumb on every one of those is both waste and a
+		lost tap, so the key carries everything the column draws.
+	]]
+	local key = ("%d|%s|%s|%s"):format(
+		index,
+		mixling.id,
+		tostring(mixling.bound == true),
+		Util.abbreviate(mixling.goopPerSec)
+	)
+	if sheetKey == key then
+		return
+	end
+	clearSheet()
+	sheetKey = key
 
 	local head = sheetRow(1, 56)
 	local name = UiKit.label({
@@ -870,7 +1100,6 @@ local function renderTakeBack(index: number)
 end
 
 local function renderSheet()
-	clearSheet()
 	local frame = sheet
 	if not frame then
 		return
@@ -879,6 +1108,7 @@ local function renderSheet()
 	local picking = pickerIndex
 	local taking = takeBackIndex
 	frame.Visible = picking ~= nil or taking ~= nil
+	showPickerBody(picking ~= nil)
 	if picking then
 		renderPicker(picking)
 		return
@@ -892,6 +1122,12 @@ local function openPicker(index: number)
 	cue("Click")
 	pickerIndex = index
 	takeBackIndex = nil
+	-- A fresh gesture starts at the top of the list. A repaint driven by a
+	-- sync deliberately does not — see rebuildPickerRows.
+	local scroll = pickerScroll
+	if scroll then
+		scroll.CanvasPosition = Vector2.new(0, 0)
+	end
 	renderSheet()
 end
 
@@ -1223,13 +1459,70 @@ local function buildSheet(parent: Frame)
 	textCeiling(title, 26)
 	sheetTitle = title
 
+	local bodyTop = PAD + TITLE_HEIGHT + GAP
+	local bodyDrop = -(PAD * 2 + TITLE_HEIGHT + GAP * 2 + ROW)
+
 	local list = UiKit.scroll({
-		Position = UDim2.fromOffset(PAD, PAD + TITLE_HEIGHT + GAP),
-		Size = UDim2.new(1, -PAD * 2, 1, -(PAD * 2 + TITLE_HEIGHT + GAP * 2 + ROW)),
+		Position = UDim2.fromOffset(PAD, bodyTop),
+		Size = UDim2.new(1, -PAD * 2, 1, bodyDrop),
 		Parent = frame,
 	})
 	UiKit.list(list, { Padding = UDim.new(0, GAP) })
 	sheetList = list
+
+	--[[
+		The picker gets its own scroll rather than a mode of the one above: the
+		take-back column is four rows packed by a UIListLayout, and a layout
+		over the picker would repack the recycled rows and undo the recycling
+		— the same reason MixdexController's grid places its tiles by offset.
+	]]
+	local picker = UiKit.scroll({
+		-- Virtualised: the canvas is set from the row count and the rows are
+		-- placed by offset, so AutomaticCanvasSize must be off or it would
+		-- measure a canvas that only ever holds the visible slice.
+		AutomaticCanvasSize = Enum.AutomaticSize.None,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+		CanvasSize = UDim2.new(),
+		Visible = false,
+		Position = UDim2.fromOffset(PAD, bodyTop),
+		Size = UDim2.new(1, -PAD * 2, 1, bodyDrop),
+		Parent = frame,
+	})
+	pickerScroll = picker
+
+	-- Inside the canvas, above every row: see PICKER_HEAD.
+	local note = UiKit.label({
+		Text = "",
+		TextColor3 = UiKit.PALETTE.muted,
+		Font = UiKit.FONT_BODY,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextWrapped = true,
+		Size = UDim2.new(1, 0, 0, PICKER_NOTE),
+		Position = UDim2.fromOffset(0, 0),
+		Parent = picker,
+	})
+	textCeiling(note, 15)
+	pickerNote = note
+
+	--[[
+		The window is capped at what the pool can serve, the way
+		MixdexController caps the height of its grid: a very tall monitor must
+		not be able to ask paintPicker for a row the pool has not got. Two
+		rows come off the count first — the part-row at the bottom edge and
+		the overscan one below it — because paintPicker asks for both.
+	]]
+	local ceiling = Instance.new("UISizeConstraint")
+	ceiling.MaxSize = Vector2.new(math.huge, (MAX_PICKER_ROWS - PICKER_OVERSCAN - 1) * PICKER_STRIDE)
+	ceiling.Parent = picker
+
+	-- A flick repaints the slice that moved; a resize changes how big the
+	-- slice is. Neither is a rebuild.
+	picker:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+		paintPicker(false)
+	end)
+	picker:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(function()
+		paintPicker(false)
+	end)
 
 	local cancel = UiKit.button({
 		Text = "BACK",

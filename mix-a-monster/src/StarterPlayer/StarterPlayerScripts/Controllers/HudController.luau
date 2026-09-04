@@ -235,11 +235,14 @@ local function viewportSize(): Vector2
 end
 
 --[[
-	UiKit.label and UiKit.button each attach a UITextSizeConstraint and read
-	its ceiling from a `MaxTextSize` prop — but applyCommon assigns every prop
-	it does not recognise straight onto the instance, and `MaxTextSize` is not
-	a member of a TextLabel, so passing it throws. Reaching for the constraint
-	the kit already made is the way to raise a ceiling without editing UiKit.
+	Raises the ceiling on the UITextSizeConstraint UiKit already attached, for
+	a label whose size is set after construction.
+
+	This helper predates the fix to UiKit.applyCommon: passing `MaxTextSize` in
+	the prop table used to throw, because applyCommon assigned every key it did
+	not recognise straight onto the Instance. It no longer does — the prop works
+	— but reaching for the constraint is still the only way to change a ceiling
+	AFTER the object exists, which is what every call site here is doing.
 ]]
 local function textCeiling(gui: GuiObject, ceiling: number)
 	local constraint = gui:FindFirstChildOfClass("UITextSizeConstraint")
@@ -249,9 +252,10 @@ local function textCeiling(gui: GuiObject, ceiling: number)
 end
 
 --[[
-	UiKit.pop scales only the Scale half of a UDim2, so an offset-sized frame
-	does not move at all. Everything this file pops is therefore sized in
-	scale, computed from a pixel target by layout().
+	Sizes here are expressed as a fraction of the parent rather than in raw
+	pixels, computed from a pixel target by layout(). That keeps one layout
+	readable from a 640x360 phone to a desktop, and it is what lets the HUD
+	rescale on a viewport change without rebuilding.
 ]]
 local function fraction(pixels: number, total: number): number
 	if total <= 0 then
@@ -589,9 +593,9 @@ function HudController.setButtonHighlight(name: string, on: boolean)
 		stroke.Transparency = 1
 		return
 	end
-	-- The stroke is the whole effect: a cluster button is an offset-sized
-	-- UIGridLayout cell, so it can be neither popped (UiKit.pop scales only
-	-- the Scale half of a UDim2) nor resized without fighting the layout.
+	-- The stroke is the whole effect: a cluster button's size belongs to the
+	-- UIGridLayout, so resizing it — by a pop or otherwise — just fights the
+	-- layout for a frame and snaps back.
 	highlighted[name] = true
 	stroke.Transparency = 0
 end

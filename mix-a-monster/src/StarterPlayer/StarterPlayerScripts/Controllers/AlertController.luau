@@ -193,12 +193,14 @@ local function cue(name: string)
 end
 
 --[[
-	UiKit.label and UiKit.button both document a `MaxTextSize` prop, but they
-	pass the whole prop table through applyCommon first, which assigns every
-	unrecognised key straight onto the Instance — so passing it throws
-	"MaxTextSize is not a valid member of TextLabel". They already attach a
-	UITextSizeConstraint, so the cap is set on that afterwards instead. Fixing
-	UiKit is not this file's to make; this is the work-around.
+	Raises the ceiling on the UITextSizeConstraint UiKit already attached, for
+	a label whose size is set after construction.
+
+	This helper predates the fix to UiKit.applyCommon: passing `MaxTextSize` in
+	the prop table used to throw, because applyCommon assigned every key it did
+	not recognise straight onto the Instance. It no longer does — the prop works
+	— but reaching for the constraint is still the only way to change a ceiling
+	AFTER the object exists, which is what every call site here is doing.
 ]]
 local function capText(instance: GuiObject, maximum: number)
 	local constraint = instance:FindFirstChildOfClass("UITextSizeConstraint")

@@ -240,11 +240,14 @@ local function flatUnit(vector: Vector3, fallback: Vector3): Vector3
 end
 
 --[[
-	UiKit.label documents a `MaxTextSize` prop, but applyCommon assigns every
-	prop it does not recognise straight onto the instance and MaxTextSize is
-	not a member of TextLabel — passing it throws. The kit already attaches a
-	UITextSizeConstraint, so the ceiling is set on that afterwards. Every
-	screen in the game carries this same three-line workaround.
+	Raises the ceiling on the UITextSizeConstraint UiKit already attached, for
+	a label whose size is set after construction.
+
+	This helper predates the fix to UiKit.applyCommon: passing `MaxTextSize` in
+	the prop table used to throw, because applyCommon assigned every key it did
+	not recognise straight onto the Instance. It no longer does — the prop works
+	— but reaching for the constraint is still the only way to change a ceiling
+	AFTER the object exists, which is what every call site here is doing.
 ]]
 local function textCeiling(gui: GuiObject, ceiling: number)
 	local constraint = gui:FindFirstChildOfClass("UITextSizeConstraint")

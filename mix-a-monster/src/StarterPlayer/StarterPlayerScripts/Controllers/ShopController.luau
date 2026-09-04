@@ -214,11 +214,14 @@ local uiReady = false
 -- ── Small helpers ────────────────────────────────────────────────────────
 
 --[[
-	UiKit.label and UiKit.button each attach a UITextSizeConstraint and read
-	its ceiling from a `MaxTextSize` prop — but applyCommon assigns every prop
-	it does not recognise straight onto the instance, and `MaxTextSize` is not
-	a member of a TextLabel, so passing it throws. Reaching for the constraint
-	the kit already made is the way to raise a ceiling without editing UiKit.
+	Raises the ceiling on the UITextSizeConstraint UiKit already attached, for
+	a label whose size is set after construction.
+
+	This helper predates the fix to UiKit.applyCommon: passing `MaxTextSize` in
+	the prop table used to throw, because applyCommon assigned every key it did
+	not recognise straight onto the Instance. It no longer does — the prop works
+	— but reaching for the constraint is still the only way to change a ceiling
+	AFTER the object exists, which is what every call site here is doing.
 ]]
 local function textCeiling(gui: GuiObject, ceiling: number)
 	local constraint = gui:FindFirstChildOfClass("UITextSizeConstraint")

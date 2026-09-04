@@ -4,9 +4,9 @@
 	§8.7 (badges), §11.3 (idempotent receipts).
 
 	OWNS: game passes, developer products, `ProcessReceipt`, the server Luck
-	Party window, and badge awards. Nothing else in the codebase may touch
-	MarketplaceService or BadgeService — one owner means one place where a
-	platform call is retried, rate-thought-about, and pcall'd.
+	Party window, badge awards, and the VIP chat tag. Nothing else in the
+	codebase may touch MarketplaceService or BadgeService — one owner means one
+	place where a platform call is retried, rate-thought-about, and pcall'd.
 
 	THE CONTRACT OTHER SERVICES RELY ON:
 	  hasPass(player, key)        -> boolean   key indexes Constants.PASSES
@@ -48,6 +48,7 @@ local BadgeService = game:GetService("BadgeService")
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextChatService = game:GetService("TextChatService")
 
 local Config = ReplicatedStorage:WaitForChild("Config")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -93,6 +94,12 @@ local BADGES: { [string]: number } = Constants.BADGES :: any
 
 local GRANTED = Enum.ProductPurchaseDecision.PurchaseGranted
 local RETRY = Enum.ProductPurchaseDecision.NotProcessedYet
+
+-- What a VIP's chat line is prefixed with (GDD §9). Not a balance value, so
+-- not in Constants — it is presentation, the same call AnnouncementService
+-- makes for its own CHAT_PREFIX. TextChatService renders PrefixText as rich
+-- text, and the colour is most of what makes a tag read as a tag.
+local VIP_CHAT_TAG = '<font color="#FFD04A">[VIP]</font> '
 
 local function sortedKeys(map: { [string]: any }): { string }
 	local keys: { string } = {}
@@ -229,6 +236,25 @@ local function writeCache(player: Player, key: string, owned: boolean): boolean
 	return true
 end
 
+--[[
+	The cached answer and nothing else: never a web query, never a yield.
+
+	This is what a caller uses when it is somewhere that cannot afford either —
+	`installChatTag`'s callback sits between a player pressing enter and their
+	message reaching the channel. `nil` (never asked) reads as "no", which is
+	right for a cosmetic: refreshPasses resolves the whole set moments after
+	the join, and the answer is only ever late, never wrong.
+]]
+local function ownsCached(player: Player, key: string): boolean
+	if passIds[key] ~= 0 then
+		local profile = profileOf(player)
+		if profile then
+			return profile.passes[key] == true
+		end
+	end
+	return false -- unwired (reported at boot), or no profile to have cached one
+end
+
 -- Yields. nil means the platform could not be asked, which is NOT the same as
 -- "does not own it": a failed query must never be cached as a false.
 local function fetchOwnership(player: Player, key: string, id: number): boolean?
@@ -358,6 +384,67 @@ function MonetizationService.getSlotBonus(player: Player): number
 		return Constants.PASSES.DenSlots.slotBonus
 	end
 	return 0
+end
+
+-- ── The VIP chat tag (GDD §9) ────────────────────────────────────────────
+
+--[[
+	The first of the three things VIP sells.
+
+	`OnIncomingMessage` is a single-slot callback, the same shape as
+	`ProcessReceipt`: a second assignment anywhere in the place would silently
+	replace this one. That is why it is here, in the service that owns every
+	platform surface, and why it is assigned exactly once.
+
+	IT MUST NOT YIELD. The callback runs between the player pressing enter and
+	the message reaching the channel, so it reads the pass cache directly
+	rather than through `hasPass`, which starts a web query on a miss. Nothing
+	is lost: the cache is filled on join, and `PromptGamePassPurchaseFinished`
+	writes it the instant VIP is bought, so the tag lands on the buyer's very
+	next line without a rejoin.
+
+	The whole thing is behind a pcall and a ChatVersion check, the way
+	AnnouncementService guards its own use of this API: the surface differs
+	between legacy chat, TextChatService and hybrid places, and a place where
+	it is absent must degrade to no tag rather than to an error on every
+	message. An unwired pass id never installs the hook at all — the id == 0
+	rule, decided once here instead of per message.
+]]
+local function onIncomingMessage(message: TextChatMessage): TextChatMessageProperties?
+	local source = message.TextSource
+	if not source then
+		return nil -- a system line (AnnouncementService's, for one) has no sender
+	end
+	local player = Players:GetPlayerByUserId(source.UserId)
+	if not player or not ownsCached(player, "VIP") then
+		return nil -- nil means "no overrides", which is the un-tagged message
+	end
+
+	local properties = Instance.new("TextChatMessageProperties")
+	-- Prefixed, not replaced: PrefixText already holds the display name the
+	-- chat is configured to show, and rebuilding it here would quietly undo
+	-- whatever the place decided about names.
+	properties.PrefixText = VIP_CHAT_TAG .. message.PrefixText
+	return properties
+end
+
+local function installChatTag()
+	if passIds.VIP == 0 then
+		return -- not wired; reported at boot, and no tag is the correct state
+	end
+	-- The annotated return is what lets a two-value pcall type check; the
+	-- DenService heartbeat is wrapped the same way.
+	local ok, err = pcall(function(): any
+		if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+			TextChatService.OnIncomingMessage = onIncomingMessage
+		end
+		-- Any other chat version is a place with no server-side hook to hang a
+		-- tag on. That is a no-op, not a failure.
+		return nil
+	end)
+	if not ok then
+		warn("[Monetization] the VIP chat tag is off: " .. tostring(err))
+	end
 end
 
 -- ── Server Luck Party (GDD §9) ───────────────────────────────────────────
@@ -746,6 +833,7 @@ function MonetizationService.start()
 	-- Assigned once, here: ProcessReceipt is a single-slot callback, and a
 	-- second assignment anywhere would silently replace this one.
 	MarketplaceService.ProcessReceipt = processReceipt
+	installChatTag()
 
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(onPassPurchased)
 
