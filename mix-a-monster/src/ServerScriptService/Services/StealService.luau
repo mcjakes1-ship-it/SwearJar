@@ -69,7 +69,7 @@ local SecretRecipes = require(ServerStorage:WaitForChild("SecretRecipes"))
 type Profile = Types.Profile
 type Mixling = Types.Mixling
 type MixlingView = Types.MixlingView
-type AlertKind = "Started" | "Stolen" | "Recovered" | "Dropped" | "Intruder"
+type AlertKind = "Started" | "Tracking" | "Stolen" | "Recovered" | "Dropped" | "Intruder"
 
 -- What a sibling service (PlayerService refuses teleports with it, DECISIONS
 -- D9) is allowed to know about a carry. Always a copy: the live record is
@@ -148,17 +148,16 @@ local CARRY_HEIGHT = 3.4 -- studs from the Head to the Mixling's root
 local DROP_LIFT = 2 -- studs above the carrier a dropped Mixling falls from
 local TICK = 0.1 -- the one heartbeat: holds, compass, drop timers
 local ALERT_INTERVAL = 1 -- how often the victim's compass gets a fresh position
--- Network slack on the server's own hold clock. A player on a 300 ms link
--- must not have legitimate steals refused; anything larger than one round
--- trip would start buying an exploiter real time.
-local HOLD_GRACE = 0.35
+-- Network slack on the server's own hold clock. It is a security threshold, so
+-- it lives in Constants rather than here.
+local HOLD_GRACE = Constants.STEAL_HOLD_GRACE
 local HOLD_KEEP = 0.5 -- a finished hold record outlives its release this long
 local PROMPT_BOUNCE = 0.15 -- how long a cancelled prompt is disabled for
 local PICKUP_DISTANCE = 10 -- prompt reach on a dropped Mixling
--- Vertical share of the bonk impulse. This shapes the arc; the strength is
--- Constants.BONK_KNOCKBACK. A pure-horizontal shove just scrapes people along
--- the ground and reads as a network hiccup rather than a hit.
-local KNOCKBACK_LIFT = 0.45
+-- Vertical share of the bonk impulse; the strength is Constants.BONK_KNOCKBACK.
+-- A pure-horizontal shove just scrapes people along the ground and reads as a
+-- network hiccup rather than a hit. Both dials live in Constants.
+local KNOCKBACK_LIFT = Constants.BONK_KNOCKBACK_LIFT
 local ALARM_SECONDS = 4
 local ALARM_RANGE = 110
 local TAG_RANGE = 300 -- how far the owner can read their own THIEF tag
@@ -1265,7 +1264,7 @@ local function tickCarries(clock: number)
 			StealService.dropCarried(player, "Down")
 		elseif clock >= carry.nextAlertAt then
 			carry.nextAlertAt = clock + ALERT_INTERVAL
-			alertOwner(carry.owner, "Started", carry.view, player, root.Position)
+			alertOwner(carry.owner, "Tracking", carry.view, player, root.Position)
 		end
 	end
 end

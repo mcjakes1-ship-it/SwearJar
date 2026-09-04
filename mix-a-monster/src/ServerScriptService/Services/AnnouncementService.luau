@@ -367,7 +367,16 @@ end
 	  Global the DISCOVERED feed (GDD §7.4): Secret only, every server, plus
 	         our own banner so the roller's server sees it immediately
 ]]
-function AnnouncementService.forRoll(player: Player, mixling: MixlingView, tier: number)
+--[[
+	`globalOk` defaults to true and exists for exactly one case: GDD §7.4 fires
+	the global DISCOVERED feed on the FIRST discovery of a secret, and only
+	MixerService knows whether this server has seen that secret before. Passing
+	false keeps the server banner and its rarity colour intact while suppressing
+	the cross-server publish, which is better than the alternatives — rebuilding
+	the banner text at the call site (the thing this service exists to own) or
+	lying about the tier and recolouring it.
+]]
+function AnnouncementService.forRoll(player: Player, mixling: MixlingView, tier: number, globalOk: boolean?)
 	local rarity = Rarity.clamp(if Net.isFiniteNumber(tier) then tier else mixling.rarity)
 	local scope = Rarity.announceScope(rarity)
 	if scope == "None" then
@@ -409,7 +418,7 @@ function AnnouncementService.forRoll(player: Player, mixling: MixlingView, tier:
 		return
 	end
 
-	if scope == "Global" then
+	if scope == "Global" and globalOk ~= false then
 		AnnouncementService.global(a)
 	end
 	AnnouncementService.server(a)

@@ -431,9 +431,18 @@ function Assembler.build(spec: BuildSpec): Model
 	end
 
 	body.Name = Assembler.displayName(spec)
-	Util.create("StringValue", { Name = "Critter", Value = spec.critter, Parent = body })
-	Util.create("StringValue", { Name = "Stuff", Value = spec.stuff, Parent = body })
 	Util.create("IntValue", { Name = "RarityTier", Value = spec.rarity, Parent = body })
+
+	-- The ingredient pair is stamped on ordinary Mixlings because it is already
+	-- public — the model is literally named "Golden Toaster Frog". It is NOT
+	-- stamped on a Secret: a Secret's pair IS the recipe, and a model sitting on
+	-- a pedestal in workspace is readable by every client in the server. Leaving
+	-- these on would hand the recipe table out one placement at a time
+	-- (GDD §11.3: "Secret recipes never replicate to the client").
+	if not spec.secretId then
+		Util.create("StringValue", { Name = "Critter", Value = spec.critter, Parent = body })
+		Util.create("StringValue", { Name = "Stuff", Value = spec.stuff, Parent = body })
+	end
 	return body
 end
 

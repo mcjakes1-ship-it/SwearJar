@@ -60,6 +60,13 @@ export type Profile = {
 	firstJoin: number,
 	tutorialDone: boolean,
 	playSeconds: number,
+	--[[
+		GDD §7.2: "Starter pair is granted once per new profile." Gating on the
+		inventory being empty would re-grant to anyone who spent theirs, so the
+		grant needs its own ledger. Optional because profiles written before it
+		existed will not carry one — Util.reconcile fills it from the template.
+	]]
+	starterGranted: boolean?,
 }
 
 -- ── Wire shapes ──────────────────────────────────────────────────────────
@@ -71,7 +78,10 @@ export type ProfileView = {
 	goopPerSec: number,
 	totalGoopEarned: number,
 	inventory: { [string]: number },
-	mixlings: { Mixling },
+	-- MixlingView, not Mixling: the wire always carries the display name and the
+	-- rate alongside the row, so one Mixling reads identically on a reveal card,
+	-- a pedestal plaque and this list, and the client never has to derive a name.
+	mixlings: { MixlingView },
 	placed: { [string]: string },
 	denSlots: number,
 	lockLevel: number,
@@ -82,6 +92,9 @@ export type ProfileView = {
 	passes: { [string]: boolean },
 	titles: { [string]: boolean },
 	settings: Settings,
+	codes: { [string]: boolean }, -- lets a Codes screen grey out what is already spent
+	mixdexDiscovered: number,
+	mixdexTotal: number,
 	tutorialDone: boolean,
 	shielded: boolean,
 	shieldEndsAt: number,
@@ -111,7 +124,9 @@ export type MixResult = {
 }
 
 export type Announcement = {
-	scope: "Local" | "Server" | "Global",
+	-- "None" mirrors Constants.RARITY[tier].announce so a routing function can
+	-- carry the tier's own scope value without translating it first.
+	scope: "None" | "Local" | "Server" | "Global",
 	kind: "Roll" | "Secret" | "Steal" | "LuckParty" | "Milestone" | "System",
 	text: string,
 	rarity: number?,
@@ -121,7 +136,13 @@ export type Announcement = {
 }
 
 export type TheftAlert = {
-	kind: "Started" | "Stolen" | "Recovered" | "Dropped" | "Intruder",
+	--[[
+		"Tracking" is the once-a-second position refresh that keeps the owner's
+		compass arrow pointed at a moving thief. It is deliberately a separate
+		kind from "Started": a client that treated a repeated "Started" as a new
+		event would toast the victim every second of the chase.
+	]]
+	kind: "Started" | "Tracking" | "Stolen" | "Recovered" | "Dropped" | "Intruder",
 	mixlingName: string,
 	rarity: number,
 	thiefName: string?,

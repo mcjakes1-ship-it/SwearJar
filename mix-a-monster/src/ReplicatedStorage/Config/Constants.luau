@@ -47,6 +47,15 @@ Constants.STEAL_INTERRUPT_DISTANCE = 3 -- studs of thief movement that cancels a
 Constants.BONK_RANGE = 8
 Constants.BONK_COOLDOWN = 0.8
 Constants.BONK_RAGDOLL_SECONDS = 2
+Constants.BONK_KNOCKBACK_LIFT = 0.45 -- vertical share of the bonk impulse; shapes the arc
+--[[
+	Network slack on the server's own hold-elapsed check. The ProximityPrompt's
+	HoldDuration runs on the thief's client, so the server times the hold itself
+	and refuses a trigger that arrives early. This is the allowance for one round
+	trip: smaller refuses legitimate steals on a bad connection, larger buys an
+	exploiter real time. It is a security threshold, not a feel value.
+]]
+Constants.STEAL_HOLD_GRACE = 0.35
 Constants.BONK_KNOCKBACK = 40 -- applied to non-carriers
 
 -- ─────────────────────────────────────────────────────────────────────────
@@ -199,6 +208,7 @@ Constants.BADGES = {
 	Mixdex100 = 0,
 	Mixdex200 = 0,
 	Streak7 = 0,
+	LuckPartyHost = 0, -- GDD §9: the Server Luck Party buyer gets a banner AND a badge
 }
 
 -- ─────────────────────────────────────────────────────────────────────────

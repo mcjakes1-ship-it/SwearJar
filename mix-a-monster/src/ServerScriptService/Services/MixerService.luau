@@ -329,7 +329,7 @@ function MixerService.rollFor(player: Player, critterName: string, stuffName: st
 		-- exists to own) or lying about the tier, which would recolour the
 		-- banner. So a repeat re-publishes; it costs one extra global line for
 		-- a pair that needs two T4/T5 ingredients to reproduce.
-		announcements.forRoll(player, view, tier)
+		announcements.forRoll(player, view, tier, firstDiscovery)
 	end
 
 	if monetization then

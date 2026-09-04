@@ -48,12 +48,22 @@ Net.SERVER_TO_CLIENT = {
 	"ProfileSync", -- (patch: { [string]: any }, full: boolean)
 	"MixResult", -- (result: Types.MixResult)
 	"Announce", -- (announcement: Types.Announcement)
-	"Notify", -- (kind: string, text: string, data: any?)
+	--[[
+		Notify(kind, text, data?) — every player-facing refusal and confirmation.
+		`kind` is one of: "Error", "Success", "Info", "Code", "Chat". "Chat" is
+		the one that is not a toast: TextChatService has no server-callable
+		broadcast, so a Mythic/Secret chat line (GDD §7.3) is relayed here for
+		the client to put in the chat window.
+	]]
+	"Notify",
 	"TheftAlert", -- (alert: Types.TheftAlert, position: Vector3?)
 	"DenSync", -- (dens: { Types.DenPublic })
 	"LeaderboardSync", -- (boards: { [string]: { Types.LeaderboardEntry } })
 	"CarryState", -- (carrying: Types.MixlingView?)
-	"ServerLuck", -- (luck: number, endsAt: number)
+	-- ServerLuck(luck: number, endsAt: number). endsAt is os.time() unix seconds,
+	-- matching every other timestamp on the wire and in the profile — compare
+	-- against os.time(), not workspace:GetServerTimeNow().
+	"ServerLuck",
 }
 
 -- Pull-based reads. The server handler must never yield on a client thread.

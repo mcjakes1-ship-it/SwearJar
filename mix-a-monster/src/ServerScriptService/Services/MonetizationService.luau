@@ -430,6 +430,11 @@ local function startLuckParty(buyer: Player)
 		})
 	end
 
+	-- GDD §9: the buyer gets a server banner AND a badge. This is the only
+	-- socially-motivated purchase in the game, so the badge is the receipt the
+	-- buyer keeps after the ten minutes are up.
+	MonetizationService.awardBadge(buyer, "LuckPartyHost")
+
 	-- Everyone's luck figure just changed, not only the buyer's.
 	if data then
 		data.forEach(function(player: Player)
