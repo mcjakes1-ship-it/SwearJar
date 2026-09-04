@@ -48,12 +48,20 @@ unzip -o luau.zip && unzip -o lsp.zip && chmod +x luau* && cd ..
 tools/check.sh                    # syntax + full type check against the real Roblox API
 tools/check.sh src/path/File.luau # one file
 tools/lint_contract.py            # cross-file rules: remotes, Constants keys, secrecy boundary
+tools/spec/run.sh                 # 105 behavioural tests, no Studio needed
+tools/balance.py                  # the economy model, read from the live Constants
 ```
+
+`tools/spec/run.sh` bundles the realm-agnostic modules against a small Roblox
+shim and runs them in the standalone interpreter, so profile migration, the roll
+distribution, secret matching and every number the player reads are tested
+before a place is ever opened. Instance-building and anything touching a service
+is covered by the Studio protocol below instead.
 
 `tools/check.sh` generates a Rojo-shaped sourcemap from `src/` so cross-module
 `require`s resolve; it does not need Rojo installed.
 
-**Both must be clean before a commit.**
+**All four must be clean before a commit.**
 
 ---
 
