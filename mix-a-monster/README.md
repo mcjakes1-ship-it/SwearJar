@@ -12,6 +12,24 @@ Every ambiguous call and why it went that way: [`DECISIONS.md`](DECISIONS.md).
 
 ## Quick start
 
+### Fastest: open a built place file (no plugin needed)
+
+```bash
+rojo build default.project.json -o MixAMonster.rbxlx
+```
+
+Double-click `MixAMonster.rbxlx` to open it in Studio, then press **Play**.
+
+**The viewport will be empty until you press Play.** That is expected: this game
+has no hand-built map. `WorldService` builds all of Blendburg when the server
+starts, and every Mixling is assembled at runtime. In Edit mode there is nothing
+to see yet; in Play mode, it all appears.
+
+A built file is a snapshot. For live editing — save a `.luau` file, see it in
+Studio instantly — use the Rojo plugin below instead.
+
+### Live sync: Rojo serve + plugin
+
 You need [Rojo](https://rojo.space) — the CLI *and* the Studio plugin, and they
 must be the same major version (7.x):
 

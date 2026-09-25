@@ -1,3 +1,5 @@
 .tools/
 sourcemap.json
 tools/spec/bundle.luau
+*.rbxl
+*.rbxlx
